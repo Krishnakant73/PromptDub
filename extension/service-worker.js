@@ -24,11 +24,22 @@ function stopKeepAlive() {
 
 async function startCapture(tab, platform) {
   try {
-    const streamId = await chrome.tabCapture.getMediaStreamId({
-      targetTabId: tab.id,
-    });
+    let streamId;
+    try {
+      streamId = await chrome.tabCapture.getMediaStreamId({
+        targetTabId: tab.id,
+      });
+    } catch (err) {
+      console.error("[PromptDub] getMediaStreamId failed:", err);
+      throw new Error("Cannot capture this tab. Make sure the tab is active and playing audio.");
+    }
 
-    await ensureOffscreenDocument();
+    try {
+      await ensureOffscreenDocument();
+    } catch (err) {
+      console.error("[PromptDub] ensureOffscreenDocument failed:", err);
+      throw new Error("Failed to create offscreen document. Try reloading the extension.");
+    }
 
     const config = await chrome.storage.local.get([
       "serverUrl",

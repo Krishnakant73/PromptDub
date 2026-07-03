@@ -160,14 +160,16 @@ function injectOverlay() {
       <div id="pd-translated-subtitle" class="pd-subtitle pd-translated"></div>
     </div>
 
-    <div id="pd-pill" draggable="false" title="Click to start | Double-click for settings">
+    <div id="pd-pill" draggable="false" title="Click to start/stop">
       <div class="pd-pill-inner">
         <div id="pd-status-dot" class="pd-dot pd-dot-off"></div>
         <span id="pd-status-text">PromptDub</span>
         <span id="pd-latency" class="pd-latency"></span>
-        <svg class="pd-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
-          <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
+        <button id="pd-settings-btn" class="pd-settings-btn" title="Settings">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+        </button>
       </div>
     </div>
 
@@ -323,8 +325,8 @@ function injectOverlay() {
           <div class="pd-help-section">
             <div class="pd-help-title">Quick Start</div>
             <div class="pd-help-step"><span class="pd-help-num">1</span> Open a YouTube or Twitch video</div>
-            <div class="pd-help-step"><span class="pd-help-num">2</span> Click the PromptDub pill to start</div>
-            <div class="pd-help-step"><span class="pd-help-num">3</span> Auto-detect identifies the language</div>
+            <div class="pd-help-step"><span class="pd-help-num">2</span> Click the green dot to start</div>
+            <div class="pd-help-step"><span class="pd-help-num">3</span> Click the gear icon for settings</div>
             <div class="pd-help-step"><span class="pd-help-num">4</span> Choose target language and mode</div>
           </div>
 
@@ -367,10 +369,6 @@ function injectOverlay() {
               <div class="pd-shortcut-item">
                 <div class="pd-keys"><kbd>Ctrl</kbd><span>+</span><kbd>Shift</kbd><span>+</span><kbd>&darr;</kbd></div>
                 <span>Dub volume down</span>
-              </div>
-              <div class="pd-shortcut-item">
-                <div class="pd-keys"><kbd>Ctrl</kbd><span>+</span><kbd>Shift</kbd><span>+</span><kbd>H</kbd></div>
-                <span>Show help</span>
               </div>
             </div>
           </div>
@@ -434,7 +432,7 @@ function syncOverlayState() {
   if (isActive) {
     if (dot) dot.className = "pd-dot pd-dot-active";
     if (text) text.textContent = "PromptDub ON";
-    if (pill) pill.title = "Click to stop | Double-click for settings";
+    if (pill) pill.title = "Click to stop";
     if (panelDot) panelDot.className = "pd-dot pd-dot-active";
     if (panelStatusDot) panelStatusDot.className = "pd-dot pd-dot-active";
     if (panelTitle) panelTitle.textContent = "Translating";
@@ -443,7 +441,7 @@ function syncOverlayState() {
   } else {
     if (dot) dot.className = "pd-dot pd-dot-off";
     if (text) text.textContent = "PromptDub";
-    if (pill) pill.title = "Click to start | Double-click for settings";
+    if (pill) pill.title = "Click to start";
     if (panelDot) panelDot.className = "pd-dot pd-dot-off";
     if (panelStatusDot) panelStatusDot.className = "pd-dot pd-dot-off";
     if (panelTitle) panelTitle.textContent = "Ready";
@@ -516,15 +514,16 @@ function applyDisplaySettings() {
 function bindEvents() {
   safeGet("pd-pill")?.addEventListener("click", (e) => {
     if (isDragging) return;
+    if (e.target.closest("#pd-settings-btn")) return;
     e.stopPropagation();
     handleAction();
   });
-  safeGet("pd-pill")?.addEventListener("dblclick", (e) => {
-    if (isDragging) return;
+
+  safeGet("pd-settings-btn")?.addEventListener("click", (e) => {
     e.stopPropagation();
-    e.preventDefault();
     togglePanel();
   });
+
   safeGet("pd-panel-close")?.addEventListener("click", (e) => { e.stopPropagation(); closePanel(); });
 
   safeGet("pd-source-lang")?.addEventListener("change", (e) => { settings.sourceLang = e.target.value; saveSettingsToStorage(); syncSettingsToStorage(); });
@@ -697,7 +696,6 @@ function initKeyboardShortcuts() {
         case "s": e.preventDefault(); handleAction(); break;
         case "m": e.preventDefault(); toggleMuteDub(); break;
         case "v": e.preventDefault(); toggleVoiceCloning(); break;
-        case "h": e.preventDefault(); switchTab("help"); if (!panelOpen) togglePanel(); break;
         case "arrowup": e.preventDefault(); adjustDubVolume(10); break;
         case "arrowdown": e.preventDefault(); adjustDubVolume(-10); break;
       }
@@ -733,27 +731,46 @@ function adjustDubVolume(delta) {
 async function handleAction() {
   try {
     if (isActive) {
-      chrome.runtime.sendMessage({ type: "toggle-capture", action: "stop", platform: detectPlatform() });
+      try {
+        chrome.runtime.sendMessage({ type: "toggle-capture", action: "stop", platform: detectPlatform() });
+      } catch (msgErr) {
+        console.warn("[PromptDub] sendMessage failed:", msgErr);
+      }
       isActive = false;
       syncOverlayState();
       showToast("Stopping...", "info");
       return;
     }
-    syncSettingsToStorage();
+
     const platform = detectPlatform();
     if (platform === "unknown") {
-      showPanelStatus("Wrong page", "Open YouTube or Twitch first", "warning");
       showToast("Open YouTube or Twitch first", "error");
       return;
     }
-    chrome.runtime.sendMessage({ type: "toggle-capture", action: "start", platform: platform, mode: settings.mode, voiceCloning: settings.voiceCloning });
+
+    syncSettingsToStorage();
+
+    try {
+      chrome.runtime.sendMessage({
+        type: "toggle-capture",
+        action: "start",
+        platform: platform,
+        mode: settings.mode,
+        voiceCloning: settings.voiceCloning,
+      });
+    } catch (msgErr) {
+      console.error("[PromptDub] sendMessage failed:", msgErr);
+      showToast("Extension error - try reloading", "error");
+      return;
+    }
+
     showPanelStatus("Starting...", "Connecting to server...", "building");
     const dot = safeGet("pd-status-dot");
     const text = safeGet("pd-status-text");
     if (dot) dot.className = "pd-dot pd-dot-building";
     if (text) text.textContent = "Connecting...";
   } catch (e) {
-    showPanelStatus("Error", e.message || "Unknown error", "error");
+    console.error("[PromptDub] handleAction error:", e);
     showToast("Error: " + (e.message || "Unknown"), "error");
   }
 }

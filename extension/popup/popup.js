@@ -29,46 +29,65 @@ document.addEventListener("DOMContentLoaded", async () => {
   serverUrl.addEventListener("change", save);
 
   actionBtn.addEventListener("click", async () => {
-    const [tab] = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
+    try {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
 
-    if (!tab?.url?.match(/youtube\.com|twitch\.tv/)) {
-      statusTitle.textContent = "Wrong page";
-      statusDetail.textContent = "Open a YouTube or Twitch stream first";
+      if (!tab?.url?.match(/youtube\.com|twitch\.tv/)) {
+        statusTitle.textContent = "Wrong page";
+        statusDetail.textContent = "Open a YouTube or Twitch stream first";
+        statusDot.className = "status-dot";
+        return;
+      }
+
+      const isCapturing = (await chrome.storage.local.get("isCapturing"))
+        .isCapturing;
+
+      let platform = "unknown";
+      if (tab.url.includes("youtube.com")) platform = "youtube";
+      else if (tab.url.includes("twitch.tv")) platform = "twitch";
+
+      if (isCapturing) {
+        try {
+          chrome.runtime.sendMessage({
+            type: "toggle-capture",
+            action: "stop",
+            platform,
+          });
+        } catch (e) {
+          console.warn("[PromptDub] sendMessage failed:", e);
+        }
+        setReadyState();
+      } else {
+        await save();
+        const config = await chrome.storage.local.get(["mode", "voiceCloning"]);
+        try {
+          chrome.runtime.sendMessage({
+            type: "toggle-capture",
+            action: "start",
+            platform,
+            mode: config.mode || "dub",
+            voiceCloning: config.voiceCloning !== false,
+          });
+        } catch (e) {
+          console.error("[PromptDub] sendMessage failed:", e);
+          statusTitle.textContent = "Error";
+          statusDetail.textContent = "Extension error - try reloading";
+          statusDot.className = "status-dot";
+          return;
+        }
+        setActiveState();
+      }
+
+      window.close();
+    } catch (err) {
+      console.error("[PromptDub] Popup error:", err);
+      statusTitle.textContent = "Error";
+      statusDetail.textContent = err.message || "Something went wrong";
       statusDot.className = "status-dot";
-      return;
     }
-
-    const isCapturing = (await chrome.storage.local.get("isCapturing"))
-      .isCapturing;
-
-    let platform = "unknown";
-    if (tab.url.includes("youtube.com")) platform = "youtube";
-    else if (tab.url.includes("twitch.tv")) platform = "twitch";
-
-    if (isCapturing) {
-      chrome.runtime.sendMessage({
-        type: "toggle-capture",
-        action: "stop",
-        platform,
-      });
-      setReadyState();
-    } else {
-      await save();
-      const config = await chrome.storage.local.get(["mode", "voiceCloning"]);
-      chrome.runtime.sendMessage({
-        type: "toggle-capture",
-        action: "start",
-        platform,
-        mode: config.mode || "dub",
-        voiceCloning: config.voiceCloning !== false,
-      });
-      setActiveState();
-    }
-
-    window.close();
   });
 
   function setActiveState() {

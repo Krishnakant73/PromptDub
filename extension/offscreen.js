@@ -78,7 +78,10 @@ async function handleStartCapture(streamId, config) {
     };
 
     wsManager.onDisconnect = () => {
-      try { chrome.runtime.sendMessage({ type: "request-new-stream" }); } catch {}
+      try {
+        if (pipeline) { pipeline.destroy(); pipeline = null; }
+        chrome.runtime.sendMessage({ type: "request-new-stream" });
+      } catch {}
     };
 
     chunkerNode.port.onmessage = (event) => {
@@ -86,8 +89,6 @@ async function handleStartCapture(streamId, config) {
         wsManager.sendAudioChunk(event.data.pcmData, event.data.chunkIndex);
       }
     };
-
-    wsManager.connect();
 
     wsManager.onReady = () => {
       wsManager.ws.send(JSON.stringify({
@@ -102,6 +103,8 @@ async function handleStartCapture(streamId, config) {
         voice_cloning: config.voiceCloning !== false,
       }));
     };
+
+    wsManager.connect();
   } catch (err) {
     console.error("[PromptDub] Capture failed:", err);
     try { chrome.runtime.sendMessage({ type: "capture-error", error: err.message || "Unknown error" }); } catch {}
