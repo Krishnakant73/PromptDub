@@ -1,8 +1,6 @@
 let pipeline = null;
 let wsManager = null;
 let currentConfig = null;
-let sessionStartTime = null;
-let sessionStatsInterval = null;
 
 chrome.runtime.onMessage.addListener(async (message) => {
   if (message.target !== "offscreen") return;
@@ -34,23 +32,25 @@ async function handleStartCapture(streamId, config) {
     });
 
     pipeline = new AudioDuckingPipeline();
-    const chunkerNode = await pipeline.initialize(mediaStream, { translateOnly: isTranslateOnly, speedBoost: config.speedBoost });
+    const chunkerNode = await pipeline.initialize(mediaStream, { translateOnly: isTranslateOnly });
 
     if (config.originalVolume !== undefined) pipeline.setOriginalVolume(config.originalVolume);
     if (config.dubVolume !== undefined) pipeline.setDubVolume(config.dubVolume);
     if (config.duckingLevel !== undefined) pipeline.setDuckingLevel(config.duckingLevel);
 
-    wsManager = new ReconnectingWebSocket(config.serverUrl, config.sessionId, { speedBoost: config.speedBoost, tier: config.tier });
+    wsManager = new ReconnectingWebSocket(config.serverUrl, config.sessionId);
 
     wsManager.onSubtitle = (msg) => {
-      chrome.runtime.sendMessage({
-        type: "subtitle-update",
-        original: msg.original,
-        translated: msg.translated,
-        sourceLang: msg.source_lang,
-        targetLang: msg.target_lang,
-        emotion: msg.emotion,
-      });
+      try {
+        chrome.runtime.sendMessage({
+          type: "subtitle-update",
+          original: msg.original,
+          translated: msg.translated,
+          sourceLang: msg.source_lang,
+          targetLang: msg.target_lang,
+          emotion: msg.emotion,
+        });
+      } catch {}
     };
 
     wsManager.onAudioChunk = (arrayBuffer) => {
@@ -62,41 +62,19 @@ async function handleStartCapture(streamId, config) {
     };
 
     wsManager.onStatus = (msg) => {
-      chrome.runtime.sendMessage({
-        type: "status-update",
-        status: msg.type,
-        progress: msg.progress,
-        step: msg.step,
-        attempt: msg.attempt,
-        qualityScore: msg.quality_score,
-        voiceCloning: msg.voice_cloning,
-        message: msg.message,
-        latencyMs: msg.latency_ms,
-      });
-    };
-
-    wsManager.onUserInfo = (msg) => {
-      chrome.runtime.sendMessage({
-        type: "user-info",
-        data: {
-          email: msg.email,
-          plan: msg.plan,
-          avatar: msg.avatar,
-          sessionCount: msg.session_count,
-          expiry: msg.expiry,
-        },
-      });
-    };
-
-    wsManager.onSessionStats = (msg) => {
-      chrome.runtime.sendMessage({
-        type: "session-stats",
-        data: {
-          duration: msg.duration,
-          chunks: msg.chunks,
-          mode: msg.mode,
-        },
-      });
+      try {
+        chrome.runtime.sendMessage({
+          type: "status-update",
+          status: msg.type,
+          progress: msg.progress,
+          step: msg.step,
+          attempt: msg.attempt,
+          qualityScore: msg.quality_score,
+          voiceCloning: msg.voice_cloning,
+          message: msg.message,
+          latencyMs: msg.latency_ms,
+        });
+      } catch {}
     };
 
     wsManager.onDisconnect = () => {
@@ -122,21 +100,7 @@ async function handleStartCapture(streamId, config) {
         platform: config.platform || "unknown",
         mode: config.mode || "dub",
         voice_cloning: config.voiceCloning !== false,
-        tier: config.tier || "personal",
-        speed_boost: config.speedBoost !== false,
       }));
-
-      sessionStartTime = Date.now();
-      clearInterval(sessionStatsInterval);
-      sessionStatsInterval = setInterval(() => {
-        if (wsManager?.ws?.readyState === WebSocket.OPEN) {
-          const duration = Math.floor((Date.now() - sessionStartTime) / 1000);
-          chrome.runtime.sendMessage({
-            type: "session-stats",
-            data: { duration, chunks: wsManager.lastChunkIndex || 0, mode: config.mode },
-          });
-        }
-      }, 5000);
     };
   } catch (err) {
     console.error("[PromptDub] Capture failed:", err);
@@ -154,7 +118,7 @@ async function handleReconnect(newStreamId) {
     });
     const isTranslateOnly = currentConfig.mode === "translate";
     pipeline = new AudioDuckingPipeline();
-    const chunkerNode = await pipeline.initialize(mediaStream, { translateOnly: isTranslateOnly, speedBoost: currentConfig.speedBoost });
+    const chunkerNode = await pipeline.initialize(mediaStream, { translateOnly: isTranslateOnly });
     if (currentConfig.originalVolume !== undefined) pipeline.setOriginalVolume(currentConfig.originalVolume);
     if (currentConfig.dubVolume !== undefined) pipeline.setDubVolume(currentConfig.dubVolume);
     if (currentConfig.duckingLevel !== undefined) pipeline.setDuckingLevel(currentConfig.duckingLevel);
@@ -162,7 +126,6 @@ async function handleReconnect(newStreamId) {
       if (event.data.type === "audio-chunk") wsManager.sendAudioChunk(event.data.pcmData, event.data.chunkIndex);
     };
     if (wsManager) wsManager.ws.send(JSON.stringify({ type: "session_resume", session_id: currentConfig.sessionId }));
-    sessionStartTime = Date.now();
   } catch (err) {
     console.error("[PromptDub] Reconnect failed:", err);
     try { chrome.runtime.sendMessage({ type: "capture-error", error: err.message || "Reconnect failed" }); } catch {}
@@ -172,8 +135,5 @@ async function handleReconnect(newStreamId) {
 function handleStopCapture() {
   try { if (wsManager) { wsManager.close(); wsManager = null; } } catch {}
   try { if (pipeline) { pipeline.destroy(); pipeline = null; } } catch {}
-  clearInterval(sessionStatsInterval);
-  sessionStatsInterval = null;
-  sessionStartTime = null;
   currentConfig = null;
 }

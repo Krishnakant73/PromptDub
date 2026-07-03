@@ -12,6 +12,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     "targetLang",
     "serverUrl",
     "isCapturing",
+    "mode",
+    "voiceCloning",
   ]);
 
   if (saved.sourceLang) sourceLang.value = saved.sourceLang;
@@ -47,20 +49,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     else if (tab.url.includes("twitch.tv")) platform = "twitch";
 
     if (isCapturing) {
-      await chrome.storage.local.set({ isCapturing: false });
       chrome.runtime.sendMessage({
         type: "toggle-capture",
-        tabId: tab.id,
+        action: "stop",
         platform,
       });
       setReadyState();
     } else {
       await save();
-      await chrome.storage.local.set({ isCapturing: true });
+      const config = await chrome.storage.local.get(["mode", "voiceCloning"]);
       chrome.runtime.sendMessage({
         type: "toggle-capture",
-        tabId: tab.id,
+        action: "start",
         platform,
+        mode: config.mode || "dub",
+        voiceCloning: config.voiceCloning !== false,
       });
       setActiveState();
     }

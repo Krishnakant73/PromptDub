@@ -4,32 +4,22 @@ class ReconnectingWebSocket {
     this.sessionId = sessionId;
     this.ws = null;
     this.reconnectAttempts = 0;
-    this.maxReconnectDelay = options.speedBoost ? 15000 : 30000;
+    this.maxReconnectDelay = 30000;
     this.maxReconnectAttempts = 10;
     this.lastChunkIndex = 0;
     this.shouldReconnect = true;
-    this.speedBoost = options.speedBoost || false;
-    this.tier = options.tier || "personal";
 
     this.onAudioChunk = null;
     this.onSubtitle = null;
     this.onStatus = null;
     this.onReady = null;
     this.onDisconnect = null;
-    this.onUserInfo = null;
-    this.onSessionStats = null;
   }
 
   connect() {
     try {
-      if (this.speedBoost && this.reconnectAttempts === 0) {
-        this._preconnect();
-      }
       this.ws = new WebSocket(this.url);
       this.ws.binaryType = "arraybuffer";
-      if (this.speedBoost) {
-        this.ws.bufferAmount = 0;
-      }
     } catch (err) {
       console.error("[PromptDub] WebSocket creation failed:", err);
       this.onStatus?.({
@@ -79,7 +69,7 @@ class ReconnectingWebSocket {
   }
 
   scheduleReconnect() {
-    const baseDelay = this.speedBoost ? 500 : 1000;
+    const baseDelay = 1000;
     const delay = Math.min(
       baseDelay * Math.pow(2, this.reconnectAttempts),
       this.maxReconnectDelay
@@ -146,14 +136,6 @@ class ReconnectingWebSocket {
           });
           break;
 
-        case "user_info":
-          this.onUserInfo?.(msg);
-          break;
-
-        case "session_stats":
-          this.onSessionStats?.(msg);
-          break;
-
         default:
           console.warn("[PromptDub] Unknown WS message type:", msg.type);
       }
@@ -183,7 +165,7 @@ class ReconnectingWebSocket {
     try {
       if (this.ws) {
         if (this.ws.readyState === WebSocket.OPEN) {
-          this.ws.send(JSON.stringify({ type: "session_end", tier: this.tier || "personal" }));
+          this.ws.send(JSON.stringify({ type: "session_end" }));
         }
         this.ws.close(1000, "Session ended by user");
       }
@@ -192,12 +174,4 @@ class ReconnectingWebSocket {
     }
   }
 
-  _preconnect() {
-    try {
-      const pingWs = new WebSocket(this.url);
-      pingWs.onopen = () => { try { pingWs.close(); } catch {} };
-      pingWs.onerror = () => {};
-      setTimeout(() => { try { pingWs.close(); } catch {} }, 2000);
-    } catch {}
-  }
 }

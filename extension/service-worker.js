@@ -37,8 +37,6 @@ async function startCapture(tab, platform) {
       "apiKey",
       "mode",
       "voiceCloning",
-      "tier",
-      "speedBoost",
     ]);
 
     const volumeConfig = await chrome.storage.local.get([
@@ -54,7 +52,7 @@ async function startCapture(tab, platform) {
       target: "offscreen",
       streamId,
       config: {
-        serverUrl: config.serverUrl || "wss://api.promptdub.com/ws/translate",
+        serverUrl: config.serverUrl || "ws://localhost:8000/ws/translate",
         targetLang: config.targetLang || "hi",
         sourceLang: config.sourceLang || "auto",
         sessionId,
@@ -62,8 +60,6 @@ async function startCapture(tab, platform) {
         platform: platform || "unknown",
         mode: config.mode || "dub",
         voiceCloning: config.voiceCloning !== false,
-        tier: config.tier || "personal",
-        speedBoost: config.speedBoost !== false,
         originalVolume: volumeConfig.originalVolume != null ? volumeConfig.originalVolume : 0.8,
         dubVolume: volumeConfig.dubVolume != null ? volumeConfig.dubVolume : 1.0,
         duckingLevel: volumeConfig.duckingLevel != null ? volumeConfig.duckingLevel : 0.2,
@@ -78,8 +74,7 @@ async function startCapture(tab, platform) {
     await chrome.action.setBadgeBackgroundColor({ color: "#22c55e" });
 
     chrome.tabs.sendMessage(tab.id, {
-      type: "capture-toggled",
-      isActive: true,
+      type: "session-started",
     });
   } catch (err) {
     console.error("[PromptDub] Failed to start capture:", err);
@@ -153,16 +148,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "toggle-capture") {
     (async () => {
       try {
-        if (isCapturing) {
+        if (message.action === "stop" || isCapturing) {
           await stopCapture();
         } else {
-          const tab = await chrome.tabs.get(message.tabId);
+          let tabId = null;
+          if (sender?.tab?.id) {
+            tabId = sender.tab.id;
+          } else {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            tabId = tab?.id;
+          }
+          if (!tabId) return;
+          const tab = await chrome.tabs.get(tabId);
           if (tab?.url?.match(SUPPORTED_SITES)) {
             await startCapture(tab, message.platform);
+          } else {
+            try {
+              chrome.tabs.sendMessage(tabId, {
+                type: "capture-error",
+                error: "Open YouTube or Twitch first",
+              });
+            } catch {}
           }
         }
       } catch (err) {
         console.error("[PromptDub] toggle-capture error:", err);
+        if (sender?.tab?.id) {
+          try {
+            chrome.tabs.sendMessage(sender.tab.id, {
+              type: "capture-error",
+              error: err.message || "Failed to toggle capture",
+            });
+          } catch {}
+        }
       }
     })();
     return true;
@@ -185,13 +203,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (
     message.type === "subtitle-update" ||
-    message.type === "status-update" ||
-    message.type === "user-info" ||
-    message.type === "session-stats"
+    message.type === "status-update"
   ) {
-    if (activeTabId) {
+    const targetTabId = activeTabId || sender?.tab?.id;
+    if (targetTabId) {
       try {
-        chrome.tabs.sendMessage(activeTabId, message);
+        chrome.tabs.sendMessage(targetTabId, message);
       } catch (e) {
         console.warn("[PromptDub] Forward message to tab error:", e);
       }
@@ -200,6 +217,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === "capture-error") {
     console.error("[PromptDub] Capture error from offscreen:", message.error);
+    const targetTabId = activeTabId || sender?.tab?.id;
+    if (targetTabId) {
+      try {
+        chrome.tabs.sendMessage(targetTabId, {
+          type: "capture-error",
+          error: message.error,
+        });
+      } catch {}
+    }
     stopCapture();
   }
 

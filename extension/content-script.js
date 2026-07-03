@@ -27,10 +27,9 @@ const POSITION_KEY = "pdOverlayPosition";
 const DEFAULT_SETTINGS = {
   sourceLang: "auto",
   targetLang: "hi",
-  serverUrl: "wss://api.promptdub.com/ws/translate",
+  serverUrl: "ws://localhost:8000/ws/translate",
   mode: "dub",
   voiceCloning: true,
-  tier: "personal",
   showOriginal: true,
   showTranslated: true,
   subtitleSize: 18,
@@ -52,23 +51,13 @@ let isDragging = false;
 let connectionState = "disconnected";
 let toastTimer = null;
 let stepTimer = null;
-let currentStep = 0;
 
 const VOICE_BUILD_STEPS = [
   { key: "connect", label: "Connecting to server" },
-  { key: "auth", label: "Authenticating session" },
   { key: "voice", label: "Building voice model" },
   { key: "pipeline", label: "Preparing audio pipeline" },
   { key: "ready", label: "Ready" },
 ];
-
-let userInfo = {
-  email: null,
-  plan: null,
-  avatar: null,
-  sessionCount: 0,
-  expiry: null,
-};
 
 function safeGet(id) {
   try { return document.getElementById(id); } catch { return null; }
@@ -171,7 +160,7 @@ function injectOverlay() {
       <div id="pd-translated-subtitle" class="pd-subtitle pd-translated"></div>
     </div>
 
-    <div id="pd-pill" draggable="false">
+    <div id="pd-pill" draggable="false" title="Click to start | Double-click for settings">
       <div class="pd-pill-inner">
         <div id="pd-status-dot" class="pd-dot pd-dot-off"></div>
         <span id="pd-status-text">PromptDub</span>
@@ -187,6 +176,7 @@ function injectOverlay() {
         <div class="pd-panel-title">
           <div id="pd-panel-dot" class="pd-dot pd-dot-off"></div>
           <span>PromptDub</span>
+          <span class="pd-beta-badge">BETA</span>
         </div>
         <button id="pd-panel-close" class="pd-panel-close-btn">&times;</button>
       </div>
@@ -200,7 +190,6 @@ function injectOverlay() {
         <button class="pd-tab pd-tab-active" data-tab="translation">Translate</button>
         <button class="pd-tab" data-tab="volume">Volume</button>
         <button class="pd-tab" data-tab="display">Display</button>
-        <button class="pd-tab" data-tab="account">Account</button>
         <button class="pd-tab" data-tab="help">Help</button>
       </div>
 
@@ -238,30 +227,6 @@ function injectOverlay() {
               <div class="pd-toggle-info">
                 <span id="pd-voice-cloning-label" class="pd-toggle-label">ON — Clone speaker's voice</span>
                 <span class="pd-toggle-hint">OFF = faster start, uses default TTS voice</span>
-              </div>
-            </div>
-          </div>
-          <div class="pd-field">
-            <label class="pd-label">Tier</label>
-            <select id="pd-tier-select" class="pd-select">
-              <option value="personal">Personal (Testing)</option>
-              <option value="free">Free</option>
-              <option value="starter">Starter</option>
-              <option value="pro">Pro</option>
-              <option value="enterprise">Enterprise</option>
-            </select>
-            <span class="pd-hint">Limits: Personal = no limits, Free = 60min/mo</span>
-          </div>
-          <div class="pd-field">
-            <label class="pd-label">Speed Boost</label>
-            <div class="pd-toggle-row">
-              <label class="pd-switch">
-                <input id="pd-speed-boost" type="checkbox" checked />
-                <span class="pd-switch-slider"></span>
-              </label>
-              <div class="pd-toggle-info">
-                <span class="pd-toggle-label">Preconnect + faster chunks</span>
-                <span class="pd-toggle-hint">Reduces initial latency by ~200ms</span>
               </div>
             </div>
           </div>
@@ -354,62 +319,13 @@ function injectOverlay() {
           </div>
         </div>
 
-        <div id="pd-tab-account" class="pd-tab-content">
-          <div id="pd-user-profile" class="pd-user-profile">
-            <div class="pd-user-avatar" id="pd-user-avatar">?</div>
-            <div class="pd-user-info">
-              <div id="pd-user-email" class="pd-user-email">Not signed in</div>
-              <div id="pd-user-plan-badge" class="pd-plan-badge pd-plan-free">Free</div>
-            </div>
-          </div>
-          <div class="pd-account-section">
-            <div class="pd-account-title">Subscription</div>
-            <div class="pd-account-row">
-              <span class="pd-account-label">Plan</span>
-              <span id="pd-account-plan" class="pd-account-value">Free</span>
-            </div>
-            <div class="pd-account-row">
-              <span class="pd-account-label">Sessions used</span>
-              <span id="pd-account-sessions" class="pd-account-value">0</span>
-            </div>
-            <div class="pd-account-row">
-              <span class="pd-account-label">Session limit</span>
-              <span id="pd-account-limit" class="pd-account-value">10 / month</span>
-            </div>
-            <div class="pd-account-row">
-              <span class="pd-account-label">Renews</span>
-              <span id="pd-account-expiry" class="pd-account-value">-</span>
-            </div>
-          </div>
-          <div id="pd-upgrade-cta" class="pd-upgrade-cta">
-            <div class="pd-upgrade-title">Upgrade to Pro</div>
-            <div class="pd-upgrade-desc">Unlimited sessions, priority voice quality, more languages</div>
-            <button id="pd-upgrade-btn" class="pd-btn pd-btn-upgrade">Upgrade Now</button>
-          </div>
-          <div class="pd-account-section">
-            <div class="pd-account-title">This Session</div>
-            <div class="pd-account-row">
-              <span class="pd-account-label">Mode</span>
-              <span id="pd-session-mode" class="pd-account-value">Dub</span>
-            </div>
-            <div class="pd-account-row">
-              <span class="pd-account-label">Duration</span>
-              <span id="pd-session-duration" class="pd-account-value">0m</span>
-            </div>
-            <div class="pd-account-row">
-              <span class="pd-account-label">Chunks processed</span>
-              <span id="pd-session-chunks" class="pd-account-value">0</span>
-            </div>
-          </div>
-        </div>
-
         <div id="pd-tab-help" class="pd-tab-content">
           <div class="pd-help-section">
             <div class="pd-help-title">Quick Start</div>
             <div class="pd-help-step"><span class="pd-help-num">1</span> Open a YouTube or Twitch video</div>
-            <div class="pd-help-step"><span class="pd-help-num">2</span> Click the PromptDub pill (top-right)</div>
-            <div class="pd-help-step"><span class="pd-help-num">3</span> Choose your mode: <b>Dub</b> (voice+text) or <b>Text Only</b></div>
-            <div class="pd-help-step"><span class="pd-help-num">4</span> Select languages and click <b>Start</b></div>
+            <div class="pd-help-step"><span class="pd-help-num">2</span> Click the PromptDub pill to start</div>
+            <div class="pd-help-step"><span class="pd-help-num">3</span> Auto-detect identifies the language</div>
+            <div class="pd-help-step"><span class="pd-help-num">4</span> Choose target language and mode</div>
           </div>
 
           <div class="pd-help-section">
@@ -486,7 +402,7 @@ function injectOverlay() {
 
 function loadInitialState() {
   try {
-    chrome.storage.local.get(["sourceLang", "targetLang", "serverUrl", "isCapturing", "mode", "voiceCloning", "tier", "speedBoost"], (data) => {
+    chrome.storage.local.get(["sourceLang", "targetLang", "serverUrl", "isCapturing", "mode", "voiceCloning"], (data) => {
       if (chrome.runtime.lastError) return;
       const srcEl = safeGet("pd-source-lang");
       const tgtEl = safeGet("pd-target-lang");
@@ -496,16 +412,12 @@ function loadInitialState() {
       if (srvEl) srvEl.value = data.serverUrl || settings.serverUrl;
       if (data.mode) settings.mode = data.mode;
       if (data.voiceCloning !== undefined) settings.voiceCloning = data.voiceCloning;
-      if (data.tier) settings.tier = data.tier;
-      if (data.speedBoost !== undefined) settings.speedBoost = data.speedBoost;
       isActive = !!data.isCapturing;
       syncOverlayState();
       syncVolumeUI();
       syncDisplayUI();
       syncModeUI();
       syncVoiceCloningUI();
-      syncTierUI();
-      syncSpeedBoostUI();
     });
   } catch (e) {}
 }
@@ -513,6 +425,7 @@ function loadInitialState() {
 function syncOverlayState() {
   const dot = safeGet("pd-status-dot");
   const text = safeGet("pd-status-text");
+  const pill = safeGet("pd-pill");
   const panelDot = safeGet("pd-panel-dot");
   const panelStatusDot = safeGet("pd-panel-status-dot");
   const panelTitle = safeGet("pd-panel-status-title");
@@ -521,6 +434,7 @@ function syncOverlayState() {
   if (isActive) {
     if (dot) dot.className = "pd-dot pd-dot-active";
     if (text) text.textContent = "PromptDub ON";
+    if (pill) pill.title = "Click to stop | Double-click for settings";
     if (panelDot) panelDot.className = "pd-dot pd-dot-active";
     if (panelStatusDot) panelStatusDot.className = "pd-dot pd-dot-active";
     if (panelTitle) panelTitle.textContent = "Translating";
@@ -528,11 +442,12 @@ function syncOverlayState() {
     if (btn) { btn.textContent = "Stop Translating"; btn.classList.add("pd-btn-stop"); }
   } else {
     if (dot) dot.className = "pd-dot pd-dot-off";
-    if (text) text.textContent = "PromptDub OFF";
+    if (text) text.textContent = "PromptDub";
+    if (pill) pill.title = "Click to start | Double-click for settings";
     if (panelDot) panelDot.className = "pd-dot pd-dot-off";
     if (panelStatusDot) panelStatusDot.className = "pd-dot pd-dot-off";
     if (panelTitle) panelTitle.textContent = "Ready";
-    if (panelDetail) panelDetail.textContent = "Open YouTube or Twitch to begin";
+    if (panelDetail) panelDetail.textContent = "Click pill to start translating";
     if (btn) { btn.textContent = "Start Translating"; btn.classList.remove("pd-btn-stop"); }
   }
 }
@@ -548,29 +463,6 @@ function syncVoiceCloningUI() {
   const label = safeGet("pd-voice-cloning-label");
   if (toggle) toggle.checked = settings.voiceCloning;
   if (label) label.textContent = settings.voiceCloning ? "ON — Clone speaker's voice" : "OFF — Default TTS voice";
-}
-
-function syncTierUI() {
-  const select = safeGet("pd-tier-select");
-  if (select) select.value = settings.tier;
-  updateTierDisplay();
-}
-
-function syncSpeedBoostUI() {
-  const toggle = safeGet("pd-speed-boost");
-  if (toggle) toggle.checked = settings.speedBoost;
-}
-
-function updateTierDisplay() {
-  const hint = document.querySelector("#pd-tier-select + .pd-hint");
-  const limits = {
-    personal: "No limits — testing tier",
-    free: "60 min/month, 1 concurrent session",
-    starter: "300 min/month, 2 concurrent sessions",
-    pro: "Unlimited, 5 concurrent sessions",
-    enterprise: "Custom limits, dedicated GPU",
-  };
-  if (hint) hint.textContent = limits[settings.tier] || "";
 }
 
 function syncVolumeUI() {
@@ -622,7 +514,17 @@ function applyDisplaySettings() {
 }
 
 function bindEvents() {
-  safeGet("pd-pill")?.addEventListener("click", (e) => { if (isDragging) return; e.stopPropagation(); togglePanel(); });
+  safeGet("pd-pill")?.addEventListener("click", (e) => {
+    if (isDragging) return;
+    e.stopPropagation();
+    handleAction();
+  });
+  safeGet("pd-pill")?.addEventListener("dblclick", (e) => {
+    if (isDragging) return;
+    e.stopPropagation();
+    e.preventDefault();
+    togglePanel();
+  });
   safeGet("pd-panel-close")?.addEventListener("click", (e) => { e.stopPropagation(); closePanel(); });
 
   safeGet("pd-source-lang")?.addEventListener("change", (e) => { settings.sourceLang = e.target.value; saveSettingsToStorage(); syncSettingsToStorage(); });
@@ -641,7 +543,6 @@ function bindEvents() {
       saveSettingsToStorage();
       syncModeUI();
       syncOverlayState();
-      updateSessionStats({ mode: settings.mode });
       try { chrome.storage.local.set({ mode: settings.mode }); } catch {}
     });
   });
@@ -652,19 +553,6 @@ function bindEvents() {
     if (label) label.textContent = e.target.checked ? "ON — Clone speaker's voice" : "OFF — Default TTS voice";
     saveSettingsToStorage();
     try { chrome.storage.local.set({ voiceCloning: settings.voiceCloning }); } catch {}
-  });
-
-  safeGet("pd-tier-select")?.addEventListener("change", (e) => {
-    settings.tier = e.target.value;
-    saveSettingsToStorage();
-    updateTierDisplay();
-    try { chrome.storage.local.set({ tier: settings.tier }); } catch {}
-  });
-
-  safeGet("pd-speed-boost")?.addEventListener("change", (e) => {
-    settings.speedBoost = e.target.checked;
-    saveSettingsToStorage();
-    try { chrome.storage.local.set({ speedBoost: settings.speedBoost }); } catch {}
   });
 
   safeGet("pd-original-volume")?.addEventListener("input", (e) => { settings.originalVolume = parseInt(e.target.value); safeGet("pd-orig-vol-val").textContent = settings.originalVolume + "%"; saveSettingsToStorage(); sendVolumeUpdate(); });
@@ -696,12 +584,7 @@ function bindEvents() {
   safeGet("pd-reset-btn")?.addEventListener("click", (e) => {
     e.stopPropagation();
     settings = { ...DEFAULT_SETTINGS };
-    saveSettingsToStorage(); syncSettingsToStorage(); syncVolumeUI(); syncDisplayUI(); syncModeUI(); syncVoiceCloningUI(); syncTierUI(); syncSpeedBoostUI();
-  });
-
-  safeGet("pd-upgrade-btn")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    window.open("https://promptdub.com/pricing", "_blank");
+    saveSettingsToStorage(); syncSettingsToStorage(); syncVolumeUI(); syncDisplayUI(); syncModeUI(); syncVoiceCloningUI();
   });
 
   document.addEventListener("click", (e) => {
@@ -744,14 +627,10 @@ function loadSettingsIntoPanel() {
   switchTab(settings.panelTab);
   syncModeUI();
   syncVoiceCloningUI();
-  syncTierUI();
-  syncSpeedBoostUI();
-  updateSessionStats({ mode: settings.mode });
-  updateUserInfo(userInfo);
 }
 
 function syncSettingsToStorage() {
-  try { chrome.storage.local.set({ sourceLang: settings.sourceLang, targetLang: settings.targetLang, serverUrl: settings.serverUrl, mode: settings.mode, voiceCloning: settings.voiceCloning, tier: settings.tier, speedBoost: settings.speedBoost }); } catch {}
+  try { chrome.storage.local.set({ sourceLang: settings.sourceLang, targetLang: settings.targetLang, serverUrl: settings.serverUrl, mode: settings.mode, voiceCloning: settings.voiceCloning }); } catch {}
 }
 
 function sendVolumeUpdate() {
@@ -853,19 +732,30 @@ function adjustDubVolume(delta) {
 
 async function handleAction() {
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab?.url?.match(/youtube\.com|twitch\.tv/)) { showPanelStatus("Wrong page", "Open YouTube or Twitch first", "warning"); return; }
-    syncSettingsToStorage();
-    chrome.storage.local.get("isCapturing", (data) => {
-      if (chrome.runtime.lastError) { showPanelStatus("Error", "Storage access failed", "error"); return; }
-      const currentlyActive = !!data.isCapturing;
-      chrome.storage.local.set({ isCapturing: !currentlyActive });
-      chrome.runtime.sendMessage({ type: "toggle-capture", tabId: tab.id, platform: detectPlatform(), mode: settings.mode, voiceCloning: settings.voiceCloning, tier: settings.tier, speedBoost: settings.speedBoost });
-      isActive = !currentlyActive;
+    if (isActive) {
+      chrome.runtime.sendMessage({ type: "toggle-capture", action: "stop", platform: detectPlatform() });
+      isActive = false;
       syncOverlayState();
-      if (isActive) closePanel();
-    });
-  } catch (e) { showPanelStatus("Error", e.message || "Unknown error", "error"); }
+      showToast("Stopping...", "info");
+      return;
+    }
+    syncSettingsToStorage();
+    const platform = detectPlatform();
+    if (platform === "unknown") {
+      showPanelStatus("Wrong page", "Open YouTube or Twitch first", "warning");
+      showToast("Open YouTube or Twitch first", "error");
+      return;
+    }
+    chrome.runtime.sendMessage({ type: "toggle-capture", action: "start", platform: platform, mode: settings.mode, voiceCloning: settings.voiceCloning });
+    showPanelStatus("Starting...", "Connecting to server...", "building");
+    const dot = safeGet("pd-status-dot");
+    const text = safeGet("pd-status-text");
+    if (dot) dot.className = "pd-dot pd-dot-building";
+    if (text) text.textContent = "Connecting...";
+  } catch (e) {
+    showPanelStatus("Error", e.message || "Unknown error", "error");
+    showToast("Error: " + (e.message || "Unknown"), "error");
+  }
 }
 
 function showPanelStatus(title, detail, state) {
@@ -899,57 +789,6 @@ function hideStepProgress() {
   clearTimeout(stepTimer);
   const container = safeGet("pd-step-progress");
   if (container) container.classList.add("pd-hidden");
-}
-
-function updateUserInfo(data) {
-  if (!data) return;
-  if (data.email) userInfo.email = data.email;
-  if (data.plan) userInfo.plan = data.plan;
-  if (data.avatar) userInfo.avatar = data.avatar;
-  if (data.sessionCount != null) userInfo.sessionCount = data.sessionCount;
-  if (data.expiry) userInfo.expiry = data.expiry;
-
-  const avatarEl = safeGet("pd-user-avatar");
-  const emailEl = safeGet("pd-user-email");
-  const planBadge = safeGet("pd-user-plan-badge");
-  const planVal = safeGet("pd-account-plan");
-  const sessionsEl = safeGet("pd-account-sessions");
-  const limitEl = safeGet("pd-account-limit");
-  const expiryEl = safeGet("pd-account-expiry");
-  const upgradeCta = safeGet("pd-upgrade-cta");
-
-  if (avatarEl) {
-    if (userInfo.avatar) {
-      avatarEl.innerHTML = `<img src="${userInfo.avatar}" alt="avatar" />`;
-    } else if (userInfo.email) {
-      avatarEl.textContent = userInfo.email.charAt(0).toUpperCase();
-    }
-  }
-  if (emailEl) emailEl.textContent = userInfo.email || "Not signed in";
-
-  const planName = userInfo.plan || "free";
-  if (planBadge) {
-    planBadge.textContent = planName.charAt(0).toUpperCase() + planName.slice(1);
-    planBadge.className = "pd-plan-badge pd-plan-" + planName;
-  }
-  if (planVal) planVal.textContent = planName.charAt(0).toUpperCase() + planName.slice(1);
-  if (sessionsEl) sessionsEl.textContent = userInfo.sessionCount || 0;
-  if (limitEl) limitEl.textContent = planName === "free" ? "10 / month" : "Unlimited";
-  if (expiryEl) expiryEl.textContent = userInfo.expiry || "-";
-  if (upgradeCta) upgradeCta.style.display = planName === "free" ? "" : "none";
-}
-
-function updateSessionStats(stats) {
-  const modeEl = safeGet("pd-session-mode");
-  const durationEl = safeGet("pd-session-duration");
-  const chunksEl = safeGet("pd-session-chunks");
-  if (modeEl) modeEl.textContent = settings.mode === "dub" ? "Dub" : "Text Only";
-  if (durationEl && stats.duration != null) {
-    const m = Math.floor(stats.duration / 60);
-    const s = stats.duration % 60;
-    durationEl.textContent = m > 0 ? `${m}m ${s}s` : `${s}s`;
-  }
-  if (chunksEl && stats.chunks != null) chunksEl.textContent = stats.chunks;
 }
 
 function updateSubtitles(original, translated) {
@@ -988,14 +827,13 @@ function updateStatus(msg) {
         if (panelTitle) panelTitle.textContent = `Building voice ${pct}%`;
         if (panelDetail) panelDetail.textContent = msg.message || "Please wait...";
         updateConnectionState("connecting", `Building voice ${pct}%...`);
-
-        const stepIdx = msg.step != null ? msg.step : Math.min(Math.floor(pct / 20), VOICE_BUILD_STEPS.length - 1);
+        const stepIdx = msg.step != null ? msg.step : Math.min(Math.floor(pct / 25), VOICE_BUILD_STEPS.length - 1);
         showStepProgress(stepIdx, msg.message || VOICE_BUILD_STEPS[stepIdx]?.label);
         break;
       }
       case "voice_ready":
         dot.classList.add("pd-dot-active"); if (panelDot) panelDot.classList.add("pd-dot-active");
-        text.textContent = "PromptDub ON"; isActive = true; syncOverlayState();
+        isActive = true; syncOverlayState();
         hideStepProgress();
         if (msg.voiceCloning === false) {
           updateConnectionState("connected", "Connected (default voice)");
@@ -1023,7 +861,9 @@ function updateStatus(msg) {
         break;
       case "error":
         dot.classList.add("pd-dot-error"); if (panelDot) panelDot.classList.add("pd-dot-error");
-        text.textContent = "Error"; isActive = false; syncOverlayState();
+        text.textContent = "Error";
+        isActive = false;
+        syncOverlayState();
         if (panelStatusDot) panelStatusDot.className = "pd-dot pd-dot-error";
         if (panelTitle) panelTitle.textContent = "Error";
         if (panelDetail) panelDetail.textContent = msg.message || "Connection failed";
@@ -1032,21 +872,49 @@ function updateStatus(msg) {
       default:
         dot.classList.add("pd-dot-idle"); if (panelDot) panelDot.classList.add("pd-dot-idle");
     }
-  } catch {}
+  } catch (err) {
+    console.warn("[PromptDub] updateStatus error:", err);
+  }
 }
 
 chrome.runtime.onMessage.addListener((msg) => {
   try {
-    if (msg.type === "subtitle-update") updateSubtitles(msg.original, msg.translated);
-    if (msg.type === "status-update") updateStatus(msg);
-    if (msg.type === "capture-toggled") { isActive = msg.isActive; syncOverlayState(); }
-    if (msg.type === "user-info") updateUserInfo(msg.data);
-    if (msg.type === "session-stats") updateSessionStats(msg.data);
-  } catch {}
+    if (msg.type === "subtitle-update") {
+      updateSubtitles(msg.original, msg.translated);
+    } else if (msg.type === "status-update") {
+      updateStatus(msg);
+    } else if (msg.type === "capture-toggled") {
+      isActive = msg.isActive;
+      syncOverlayState();
+      if (!isActive) {
+        updateConnectionState("disconnected", "Stopped");
+        showToast("Translation stopped", "info");
+      }
+    } else if (msg.type === "capture-error") {
+      isActive = false;
+      syncOverlayState();
+      showPanelStatus("Error", msg.error || "Capture failed", "error");
+      showToast("Error: " + (msg.error || "Capture failed"), "error");
+      updateConnectionState("error", msg.error || "Capture failed");
+    } else if (msg.type === "session-started") {
+      isActive = true;
+      syncOverlayState();
+      updateConnectionState("connecting", "Connecting to server...");
+      showToast("Starting translation...", "info");
+    }
+  } catch (err) {
+    console.warn("[PromptDub] Message handler error:", err);
+  }
 });
 
 chrome.storage?.onChanged?.addListener((changes, area) => {
-  if (area === "local" && changes.isCapturing) { isActive = !!changes.isCapturing.newValue; syncOverlayState(); }
+  if (area === "local" && changes.isCapturing) {
+    const newState = !!changes.isCapturing.newValue;
+    if (newState !== isActive) {
+      isActive = newState;
+      syncOverlayState();
+    }
+  }
 });
 
 document.addEventListener("yt-navigate-finish", () => setTimeout(injectOverlay, 500));

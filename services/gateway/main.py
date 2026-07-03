@@ -90,8 +90,6 @@ async def websocket_translate(ws: WebSocket):
                     user_id = msg.get("user_id", "anonymous")
                     config = msg
                     voice_cloning_enabled = msg.get("voice_cloning", True)
-                    tier = msg.get("tier", "personal")
-                    speed_boost = msg.get("speed_boost", False)
 
                     await state.create_session(session_id, user_id, {
                         "source_lang": msg.get("source_lang", "auto"),
@@ -99,8 +97,6 @@ async def websocket_translate(ws: WebSocket):
                         "platform": msg.get("platform", "youtube"),
                         "started_at": time.time(),
                         "voice_cloning": voice_cloning_enabled,
-                        "tier": tier,
-                        "speed_boost": speed_boost,
                     })
 
                     if not voice_cloning_enabled:
@@ -139,7 +135,7 @@ async def websocket_translate(ws: WebSocket):
                 elif msg_type == "session_end":
                     if session_id:
                         await state.end_session(session_id)
-                        logger.info(f"Session ended: {session_id} (tier: {tier})")
+                        logger.info(f"Session ended: {session_id}")
                     break
 
             elif "bytes" in data:
@@ -245,7 +241,6 @@ async def websocket_translate(ws: WebSocket):
                         speaker_embedding=voice_embedding,
                         emotion=emotion,
                         target_lang=config.get("target_lang", "hi"),
-                        speed=1.2 if speed_boost else 1.0,
                     ):
                         await ws.send_bytes(audio_chunk)
                 except Exception as e:

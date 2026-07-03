@@ -19,7 +19,6 @@ class AudioDuckingPipeline {
   async initialize(tabMediaStream, options = {}) {
     try {
       this.translateOnly = options.translateOnly || false;
-      this.speedBoost = options.speedBoost || false;
       this.audioCtx = new AudioContext({ sampleRate: 16000 });
       await this.audioCtx.resume();
 
@@ -33,10 +32,8 @@ class AudioDuckingPipeline {
       this.translatedGain.connect(this.audioCtx.destination);
 
       await this.audioCtx.audioWorklet.addModule("audio-worklet-processor.js");
-      const chunkDurationMs = this.speedBoost ? 800 : 1000;
-      const overlapMs = this.speedBoost ? 150 : 200;
       this.chunkerNode = new AudioWorkletNode(this.audioCtx, "audio-chunker", {
-        processorOptions: { chunkDurationMs, overlapMs, sampleRate: 16000 },
+        processorOptions: { chunkDurationMs: 1000, overlapMs: 200, sampleRate: 16000 },
       });
       source.connect(this.chunkerNode);
 
@@ -108,6 +105,7 @@ class AudioDuckingPipeline {
       const pcmData = this.playbackQueue.shift();
       try {
         const int16Array = new Int16Array(pcmData);
+        if (int16Array.length < 100) continue;
         const float32Array = new Float32Array(int16Array.length);
         for (let i = 0; i < int16Array.length; i++) float32Array[i] = int16Array[i] / 32768.0;
         const audioBuffer = this.audioCtx.createBuffer(1, float32Array.length, 16000);
