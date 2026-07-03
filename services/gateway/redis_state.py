@@ -1,10 +1,14 @@
+import os
 import redis.asyncio as redis
 import time
 
 
 class SessionStateManager:
-    def __init__(self, redis_url: str = "redis://localhost:6379/0"):
-        self.redis = redis.from_url(redis_url, decode_responses=False)
+    def __init__(self, redis_url: str = None):
+        self.redis = redis.from_url(
+            redis_url or os.environ.get("REDIS_URL", "redis://localhost:6379/0"),
+            decode_responses=False,
+        )
 
     async def close(self):
         await self.redis.close()
@@ -22,6 +26,7 @@ class SessionStateManager:
             b"started_at": str(int(config["started_at"])).encode(),
             b"last_heartbeat": str(int(config["started_at"])).encode(),
             b"chunks_processed": b"0",
+            b"voice_cloning": str(config.get("voice_cloning", True)).encode(),
         })
         pipe.expire(session_key, 7200)
 
@@ -30,6 +35,18 @@ class SessionStateManager:
         pipe.expire(user_key, 7200)
 
         await pipe.execute()
+
+    async def get_session(self, session_id: str) -> dict | None:
+        meta = await self.redis.hgetall(f"session:{session_id}:meta")
+        if not meta:
+            return None
+        return {
+            "user_id": meta.get(b"user_id", b"").decode(),
+            "source_lang": meta.get(b"source_lang", b"auto").decode(),
+            "target_lang": meta.get(b"target_lang", b"hi").decode(),
+            "platform": meta.get(b"platform", b"youtube").decode(),
+            "voice_cloning": meta.get(b"voice_cloning", b"True").decode() == "True",
+        }
 
     async def end_session(self, session_id: str):
         meta = await self.redis.hgetall(f"session:{session_id}:meta")

@@ -1,4 +1,5 @@
 import asyncio
+import os
 import struct
 import time
 import json
@@ -32,16 +33,20 @@ async def lifespan(app: FastAPI):
     tts_client = TTSClient()
     logger.info("PromptDub Gateway started")
     yield
+    await stt_client.close()
+    await translation_client.close()
+    await tts_client.close()
     await state.close()
     logger.info("PromptDub Gateway stopped")
 
 
 app = FastAPI(title="PromptDub Gateway", version="0.1.0", lifespan=lifespan)
 
+cors_origins = os.environ.get("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=cors_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -70,12 +75,14 @@ async def websocket_translate(ws: WebSocket):
     await ws.accept()
 
     session_id = None
-    user_id = None
+    user_id = "anonymous"
     config = {}
     voice_sample_buffer = bytearray()
     voice_ready = False
     chunks_for_embedding = 0
     voice_embedding = None
+    voice_cloning_enabled = True
+    current_mode = "quality"
 
     try:
         while True:
@@ -90,6 +97,7 @@ async def websocket_translate(ws: WebSocket):
                     user_id = msg.get("user_id", "anonymous")
                     config = msg
                     voice_cloning_enabled = msg.get("voice_cloning", True)
+                    current_mode = msg.get("mode", "quality")
 
                     await state.create_session(session_id, user_id, {
                         "source_lang": msg.get("source_lang", "auto"),
@@ -121,6 +129,10 @@ async def websocket_translate(ws: WebSocket):
 
                 elif msg_type == "session_resume":
                     session_id = msg["session_id"]
+                    session_data = await state.get_session(session_id)
+                    if session_data:
+                        voice_cloning_enabled = session_data.get("voice_cloning", True)
+                        config = session_data
                     voice_embedding = await state.get_voice_embedding(session_id)
                     if voice_embedding:
                         voice_ready = True
@@ -128,7 +140,17 @@ async def websocket_translate(ws: WebSocket):
                             "type": "voice_ready",
                             "session_id": session_id,
                             "quality_score": 0.78,
+                            "voice_cloning": voice_cloning_enabled,
                             "message": "Session resumed with existing voice profile",
+                        })
+                    elif not voice_cloning_enabled:
+                        voice_ready = True
+                        await ws.send_json({
+                            "type": "voice_ready",
+                            "session_id": session_id,
+                            "quality_score": 0.0,
+                            "voice_cloning": False,
+                            "message": "Session resumed (voice cloning disabled)",
                         })
                     logger.info(f"Session resumed: {session_id}")
 
@@ -178,6 +200,7 @@ async def websocket_translate(ws: WebSocket):
                                 "type": "voice_ready",
                                 "session_id": session_id,
                                 "quality_score": 0.72,
+                                "voice_cloning": voice_cloning_enabled,
                                 "message": "Voice profile ready! Starting translation...",
                             })
                             logger.info(f"Voice embedding ready for session {session_id}")
@@ -188,6 +211,7 @@ async def websocket_translate(ws: WebSocket):
                                 "type": "voice_ready",
                                 "session_id": session_id,
                                 "quality_score": 0.0,
+                                "voice_cloning": False,
                                 "message": "Voice cloning unavailable, using default voice",
                             })
                     else:
@@ -200,7 +224,7 @@ async def websocket_translate(ws: WebSocket):
 
                 # Phase 2: Full pipeline (STT → Translation → TTS)
                 try:
-                    stt_result = await stt_client.transcribe(pcm_data, sample_rate=16000)
+                    stt_result = await stt_client.transcribe(pcm_data, sample_rate=16000, mode=current_mode)
                 except Exception as e:
                     logger.warning(f"STT failed for chunk {chunk_index}: {e}")
                     continue
@@ -241,6 +265,7 @@ async def websocket_translate(ws: WebSocket):
                         speaker_embedding=voice_embedding,
                         emotion=emotion,
                         target_lang=config.get("target_lang", "hi"),
+                        mode=current_mode,
                     ):
                         await ws.send_bytes(audio_chunk)
                 except Exception as e:

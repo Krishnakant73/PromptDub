@@ -1,3 +1,4 @@
+import os
 from openai import AsyncOpenAI
 
 
@@ -14,9 +15,11 @@ RULES:
 
 
 class TranslationClient:
-    def __init__(self, base_url: str = "http://localhost:8001/v1"):
-        self.client = AsyncOpenAI(base_url=base_url, api_key="not-needed")
-        self.model = "Qwen/Qwen2.5-7B-Instruct-AWQ"
+    def __init__(self, base_url: str = None):
+        base_url = base_url or os.environ.get("LLM_SERVICE_URL", "http://localhost:8001/v1")
+        api_key = os.environ.get("LLM_API_KEY", "not-needed")
+        self.client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+        self.model = os.environ.get("LLM_MODEL", "Qwen/Qwen3-8B")
 
     async def translate(
         self,
@@ -42,4 +45,10 @@ class TranslationClient:
             top_p=0.9,
         )
 
+        if not response.choices or response.choices[0].message.content is None:
+            raise ValueError("Empty LLM response")
+
         return response.choices[0].message.content.strip()
+
+    async def close(self):
+        await self.client.close()

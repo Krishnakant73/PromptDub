@@ -25,6 +25,41 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("promptdub-colab")
 
 # ============================================================
+# CosyVoice3 Installation (run once in Colab)
+# ============================================================
+
+def install_cosyvoice():
+    """Install CosyVoice3 dependencies in Colab."""
+    import subprocess
+
+    logger.info("Installing CosyVoice3 dependencies...")
+
+    # Clone CosyVoice repo
+    if not os.path.exists("CosyVoice"):
+        subprocess.run(["git", "clone", "https://github.com/FunAudioLLM/CosyVoice.git"], check=True)
+
+    # Install requirements
+    subprocess.run([sys.executable, "-m", "pip", "install", "-r", "CosyVoice/requirements.txt"], check=True)
+
+    # Download CosyVoice3 model from ModelScope
+    if not os.path.exists("Fun-CosyVoice3-0.5B"):
+        logger.info("Downloading CosyVoice3 model (this may take a few minutes)...")
+        subprocess.run([
+            sys.executable, "-c",
+            "from modelscope import snapshot_download; snapshot_download('iic/Fun-CosyVoice3-0.5B-2512', local_dir='Fun-CosyVoice3-0.5B')"
+        ], check=True)
+
+    # Add CosyVoice to path
+    sys.path.insert(0, "CosyVoice")
+    os.environ["COSYVOICE_MODEL_DIR"] = "Fun-CosyVoice3-0.5B"
+
+    logger.info("CosyVoice3 installed successfully!")
+
+
+# Uncomment the line below to auto-install in Colab:
+# install_cosyvoice()
+
+# ============================================================
 # In-Memory Redis Replacement (no external Redis needed)
 # ============================================================
 
@@ -199,20 +234,28 @@ class SessionStateManager:
 # STT Client (Faster-Whisper on local GPU)
 # ============================================================
 
-stt_model = None
+STT_MODEL_CONFIGS = {
+    "fast": "base",
+    "balanced": "small",
+    "quality": "deepdml/faster-whisper-large-v3-turbo-ct2",
+}
 
-def load_stt_model():
-    global stt_model
-    if stt_model is None:
-        from faster_whisper import WhisperModel
-        logger.info("Loading Faster-Whisper model (large-v3-turbo)...")
-        stt_model = WhisperModel("large-v3-turbo", device="cuda", compute_type="int8")
-        logger.info("STT model loaded.")
-    return stt_model
+stt_models = {}
+
+def load_stt_model(mode="quality"):
+    if mode in stt_models:
+        return stt_models[mode]
+
+    from faster_whisper import WhisperModel
+    model_name = STT_MODEL_CONFIGS.get(mode, STT_MODEL_CONFIGS["quality"])
+    logger.info(f"Loading Faster-Whisper model ({model_name}) for {mode} mode...")
+    stt_models[mode] = WhisperModel(model_name, device="cuda", compute_type="int8")
+    logger.info(f"STT model loaded for {mode} mode.")
+    return stt_models[mode]
 
 
-async def transcribe(pcm_data: bytes, sample_rate: int = 16000) -> dict:
-    model = load_stt_model()
+async def transcribe(pcm_data: bytes, sample_rate: int = 16000, mode: str = "quality") -> dict:
+    model = load_stt_model(mode)
     audio_np = np.frombuffer(pcm_data, dtype=np.int16).astype(np.float32) / 32768.0
 
     segments, info = model.transcribe(
@@ -227,10 +270,11 @@ async def transcribe(pcm_data: bytes, sample_rate: int = 16000) -> dict:
 
 
 # ============================================================
-# Translation Client (free Hugging Face Inference API)
+# Translation Client (Qwen3-8B via vLLM)
 # ============================================================
 
-HF_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
+LLM_MODEL = os.environ.get("LLM_MODEL", "Qwen/Qwen3-8B")
+LLM_API_URL = os.environ.get("LLM_API_URL", "http://localhost:8001/v1/chat/completions")
 
 async def translate(
     text: str,
@@ -239,6 +283,54 @@ async def translate(
     context_window: list[str] | None = None,
 ) -> str:
     import httpx
+
+    SYSTEM_PROMPT = """You are a real-time stream translator. Translate the following speech transcript.
+RULES:
+- Translate naturally, not literally. Preserve the speaker's tone, slang, and intent.
+- Keep numbers, proper nouns, brand names as-is.
+- Output ONLY the translation. No explanations.
+- Preserve emotional markers: excitement (!), questions (?), hesitation (...)."""
+
+    user_content = f"Translate from {source_lang} to {target_lang}:\n{text}"
+    if context_window:
+        context_str = "\n".join(context_window[-3:])
+        user_content = f"Previous context:\n{context_str}\n\n{user_content}"
+
+    payload = {
+        "model": LLM_MODEL,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_content},
+        ],
+        "max_tokens": 256,
+        "temperature": 0.3,
+        "top_p": 0.9,
+    }
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            response = await client.post(LLM_API_URL, json=payload)
+            if response.status_code == 200:
+                return response.json()["choices"][0]["message"]["content"].strip()
+            else:
+                logger.warning(f"LLM API error {response.status_code}: {response.text}")
+                return text
+        except Exception as e:
+            logger.warning(f"LLM API unavailable: {e}")
+            # Fallback to HuggingFace Inference API
+            return await translate_hf(text, source_lang, target_lang, context_window)
+
+
+async def translate_hf(
+    text: str,
+    source_lang: str,
+    target_lang: str,
+    context_window: list[str] | None = None,
+) -> str:
+    """Fallback: HuggingFace Inference API"""
+    import httpx
+
+    HF_API_URL = "https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta"
 
     SYSTEM_PROMPT = """You are a real-time stream translator. Translate the following speech transcript.
 RULES:
@@ -267,23 +359,129 @@ RULES:
 
 
 # ============================================================
-# TTS Client (edge-tts — free, no API key)
+# TTS Client (CosyVoice3 + Svara TTS)
 # ============================================================
 
-EDGE_TTS_MAP = {
-    "hi": "hi-IN-SwaraNeural",
-    "en": "en-US-JennyNeural",
-    "es": "es-ES-ElviraNeural",
-    "fr": "fr-FR-DeniseNeural",
-    "de": "de-DE-KatjaNeural",
-    "ja": "ja-JP-NanamiNeural",
-    "ko": "ko-KR-SunHiNeural",
-    "zh": "zh-CN-XiaoxiaoNeural",
-    "pt": "pt-BR-FranciscaNeural",
-    "ru": "ru-RU-SvetlanaNeural",
-    "ar": "ar-SA-ZariyahNeural",
-    "tr": "tr-TR-EmelNeural",
-    "it": "it-IT-ElsaNeural",
+tts_model = None
+svara_model = None
+svara_tokenizer = None
+TTS_SAMPLE_RATE = 24000
+
+INDIC_LANGUAGES = {
+    "hi": "Hindi",
+    "bn": "Bengali",
+    "mr": "Marathi",
+    "te": "Telugu",
+    "kn": "Kannada",
+    "ta": "Tamil",
+    "ml": "Malayalam",
+    "gu": "Gujarati",
+    "pa": "Punjabi",
+    "as": "Assamese",
+    "ne": "Nepali",
+    "sa": "Sanskrit",
+}
+
+EMOTION_MAP = {
+    "neutral": "",
+    "happy": "Speak with happiness and enthusiasm. ",
+    "sad": "Speak with a sad, melancholic tone. ",
+    "angry": "Speak with anger and intensity. ",
+    "excited": "Speak with high energy and excitement! ",
+    "curious": "Speak with curiosity and interest. ",
+    "hesitant": "Speak with hesitation and uncertainty. ",
+    "whisper": "Speak in a soft whisper. ",
+}
+
+SVARA_EMOTION_MAP = {
+    "neutral": "",
+    "happy": "<happy> ",
+    "sad": "<sad> ",
+    "angry": "<anger> ",
+    "excited": "<excited> ",
+    "curious": "<clear> ",
+    "hesitant": "<clear> ",
+    "whisper": "<whispering> ",
+}
+
+TTS_LANG_MAP = {
+    "hi": "Chinese",
+    "en": "English",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "de": "German",
+    "es": "Spanish",
+    "fr": "French",
+    "it": "Italian",
+    "ru": "Russian",
+    "zh": "Chinese",
+}
+
+
+def load_tts_model():
+    global tts_model
+    if tts_model is not None:
+        return tts_model
+
+    logger.info("Loading CosyVoice3 TTS model...")
+    try:
+        from cosyvoice.cli.cosyvoice import CosyVoice3
+        model_dir = os.environ.get("COSYVOICE_MODEL_DIR", "Fun-CosyVoice3-0.5B")
+        tts_model = CosyVoice3(model_dir, load_jit=True, load_trt=False)
+        logger.info(f"CosyVoice3 loaded from {model_dir}")
+    except ImportError:
+        logger.warning("CosyVoice3 not available, trying CosyVoice2...")
+        from cosyvoice.cli.cosyvoice import CosyVoice2
+        model_dir = os.environ.get("COSYVOICE_MODEL_DIR", "CosyVoice2-0.5B")
+        tts_model = CosyVoice2(model_dir, load_jit=True, load_trt=False)
+        logger.info(f"CosyVoice2 loaded from {model_dir}")
+    except Exception as e:
+        logger.error(f"Failed to load TTS model: {e}")
+        raise
+
+    return tts_model
+
+
+def load_svara_model():
+    global svara_model, svara_tokenizer
+    if svara_model is not None:
+        return svara_model, svara_tokenizer
+
+    logger.info("Loading Svara-TTS model...")
+    try:
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+        model_name = os.environ.get("SVARATTS_MODEL", "kenpath/svara-tts-v1")
+        svara_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        svara_model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            torch_dtype=torch.float16,
+            device_map="auto",
+        )
+        logger.info(f"Svara-TTS loaded from {model_name}")
+    except Exception as e:
+        logger.warning(f"Svara-TTS not available: {e}")
+        svara_model = None
+        svara_tokenizer = None
+
+    return svara_model, svara_tokenizer
+
+
+TTS_MODE_CONFIGS = {
+    "fast": {
+        "use_svara": True,
+        "use_cosyvoice": False,
+        "speed": 1.2,
+    },
+    "balanced": {
+        "use_svara": True,
+        "use_cosyvoice": True,
+        "speed": 1.0,
+    },
+    "quality": {
+        "use_svara": True,
+        "use_cosyvoice": True,
+        "speed": 1.0,
+    },
 }
 
 
@@ -292,24 +490,120 @@ async def synthesize_streaming(
     speaker_embedding: bytes | None,
     emotion: str = "neutral",
     target_lang: str = "en",
+    mode: str = "quality",
 ) -> AsyncIterator[bytes]:
-    import edge_tts
-    import io
+    import torch
+    import torchaudio
 
-    voice = EDGE_TTS_MAP.get(target_lang, "en-US-JennyNeural")
-    communicate = edge_tts.Communicate(text, voice)
+    mode_config = TTS_MODE_CONFIGS.get(mode, TTS_MODE_CONFIGS["quality"])
+    use_svara = target_lang in INDIC_LANGUAGES and svara_model is not None
 
-    async for chunk in communicate.stream():
-        if chunk["type"] == "audio":
-            yield chunk["data"]
+    if use_svara and (mode_config["use_svara"] or not tts_model):
+        model, tokenizer = load_svara_model()
+        if model is None:
+            logger.warning("Svara-TTS not available, falling back to CosyVoice")
+
+        emotion_prefix = SVARA_EMOTION_MAP.get(emotion, "")
+        full_text = f"{emotion_prefix}{text}"
+
+        lang_name = INDIC_LANGUAGES.get(target_lang, "Hindi")
+        prompt = f"{lang_name} (Female): {full_text}"
+
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+
+        with torch.no_grad():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=1024,
+                temperature=0.7,
+                top_p=0.9,
+            )
+
+        audio_tokens = tokenizer.decode(outputs[0][inputs["input_ids"].shape[1]:], skip_special_tokens=False)
+
+        if hasattr(model, 'decode_audio'):
+            audio = model.decode_audio(audio_tokens)
+            audio_np = audio.cpu().numpy().squeeze()
+            pcm = (audio_np * 32767).astype(np.int16).tobytes()
+            yield pcm
+        else:
+            silence = np.zeros(16000, dtype=np.int16)
+            yield silence.tobytes()
+    else:
+        model = load_tts_model()
+
+        emotion_prefix = EMOTION_MAP.get(emotion, "")
+        full_text = f"{emotion_prefix}{text}"
+
+        mode_speed = mode_config.get("speed", 1.0)
+
+        try:
+            if speaker_embedding:
+                embedding_tensor = torch.frombuffer(speaker_embedding, dtype=torch.float32)
+
+                for chunk in model.inference_zero_shot_streaming(
+                    tts_text=full_text,
+                    prompt_text="",
+                    prompt_speech=embedding_tensor,
+                    stream=True,
+                    speed=mode_speed,
+                ):
+                    audio = chunk["tts_speech"].squeeze()
+                    audio_np = audio.cpu().numpy()
+                    pcm = (audio_np * 32767).astype(np.int16).tobytes()
+                    yield pcm
+            else:
+                if hasattr(model, 'inference_instruct3'):
+                    lang = TTS_LANG_MAP.get(target_lang, "English")
+                    for chunk in model.inference_instruct3(
+                        tts_text=full_text,
+                        instruct_text=f"Speak in {lang} language with natural prosody.",
+                        stream=True,
+                    ):
+                        audio = chunk["tts_speech"].squeeze()
+                        audio_np = audio.cpu().numpy()
+                        pcm = (audio_np * 32767).astype(np.int16).tobytes()
+                        yield pcm
+                else:
+                    for chunk in model.inference_zero_shot_streaming(
+                        tts_text=full_text,
+                        prompt_text="",
+                        prompt_speech=torch.randn(16000),
+                        stream=True,
+                    ):
+                        audio = chunk["tts_speech"].squeeze()
+                        audio_np = audio.cpu().numpy()
+                        pcm = (audio_np * 32767).astype(np.int16).tobytes()
+                        yield pcm
+        except Exception as e:
+            logger.error(f"TTS synthesis failed: {e}")
+            silence = np.zeros(16000, dtype=np.int16)
+            yield silence.tobytes()
 
 
 # ============================================================
-# Voice Embedding (placeholder — random vector)
+# Voice Embedding (CosyVoice3)
 # ============================================================
 
 async def extract_speaker_embedding(audio_bytes: bytes, sample_rate: int = 16000) -> bytes:
-    audio_np = np.frombuffer(audio_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+    import torch
+
+    model = load_tts_model()
+
+    try:
+        audio = torch.frombuffer(audio_bytes, dtype=torch.int16).float() / 32768.0
+
+        if hasattr(model, 'frontend') and hasattr(model.frontend, 'extract_speaker_embedding'):
+            embedding = model.frontend.extract_speaker_embedding(audio, sample_rate)
+            return embedding.cpu().numpy().tobytes()
+        elif hasattr(model, 'llm') and hasattr(model.llm, 'embedding'):
+            # Alternative: extract embedding from LLM
+            embedding = model.llm.embedding(audio.unsqueeze(0))
+            return embedding.cpu().numpy().tobytes()
+    except Exception as e:
+        logger.warning(f"CosyVoice embedding extraction failed: {e}")
+
+    # Fallback: random placeholder
     embedding = np.random.randn(192).astype(np.float32)
     embedding = embedding / np.linalg.norm(embedding)
     return embedding.tobytes()
@@ -359,7 +653,31 @@ app.add_middleware(
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "promptdub-colab-gateway"}
+    tts_loaded = tts_model is not None
+    svara_loaded = svara_model is not None
+    tts_version = "3" if tts_loaded and hasattr(tts_model, 'inference_instruct3') else ("2" if tts_loaded else "none")
+    return {
+        "status": "ok",
+        "service": "promptdub-colab-gateway",
+        "tts_loaded": tts_loaded,
+        "tts_version": tts_version,
+        "svara_loaded": svara_loaded,
+        "stt_modes": list(stt_models.keys()),
+        "llm_model": LLM_MODEL,
+    }
+
+
+@app.get("/modes")
+async def get_modes():
+    return {
+        "stt_modes": STT_MODEL_CONFIGS,
+        "tts_modes": TTS_MODE_CONFIGS,
+        "stt_loaded": list(stt_models.keys()),
+        "tts_loaded": {
+            "cosyvoice": tts_model is not None,
+            "svara": svara_model is not None,
+        },
+    }
 
 
 @app.websocket("/ws/translate")
@@ -367,12 +685,14 @@ async def websocket_translate(ws: WebSocket):
     await ws.accept()
 
     session_id = None
-    user_id = None
+    user_id = "anonymous"
     config = {}
     voice_sample_buffer = bytearray()
     voice_ready = False
     chunks_for_embedding = 0
     voice_embedding = None
+    voice_cloning_enabled = True
+    current_mode = "quality"  # Default mode
 
     try:
         while True:
@@ -390,6 +710,18 @@ async def websocket_translate(ws: WebSocket):
                     tier = msg.get("tier", "personal")
                     speed_boost = msg.get("speed_boost", False)
 
+                    # Auto-select mode based on user preference or target language
+                    requested_mode = msg.get("mode", "auto")
+                    if requested_mode == "auto":
+                        target_lang = msg.get("target_lang", "en")
+                        # Use fast mode for Indic languages (Svara TTS), quality for others
+                        if target_lang in INDIC_LANGUAGES:
+                            current_mode = "fast"
+                        else:
+                            current_mode = "quality"
+                    else:
+                        current_mode = requested_mode
+
                     await state.create_session(session_id, user_id, {
                         "source_lang": msg.get("source_lang", "auto"),
                         "target_lang": msg.get("target_lang", "hi"),
@@ -398,6 +730,7 @@ async def websocket_translate(ws: WebSocket):
                         "voice_cloning": voice_cloning_enabled,
                         "tier": tier,
                         "speed_boost": speed_boost,
+                        "mode": current_mode,
                     })
 
                     if not voice_cloning_enabled:
@@ -408,17 +741,30 @@ async def websocket_translate(ws: WebSocket):
                             "session_id": session_id,
                             "quality_score": 0.0,
                             "voice_cloning": False,
-                            "message": "Voice cloning disabled — using default TTS voice",
+                            "mode": current_mode,
+                            "message": f"Voice cloning disabled — using {current_mode} mode",
                         })
-                        logger.info(f"Session started (no voice cloning): {session_id}")
+                        logger.info(f"Session started (no voice cloning, {current_mode} mode): {session_id}")
                     else:
                         await ws.send_json({
                             "type": "session_ready",
                             "session_id": session_id,
                             "status": "initializing",
-                            "message": "Building voice profile... (5 seconds)",
+                            "mode": current_mode,
+                            "message": f"Building voice profile... ({current_mode} mode)",
                         })
-                        logger.info(f"Session started: {session_id}")
+                        logger.info(f"Session started ({current_mode} mode): {session_id}")
+
+                elif msg_type == "set_mode":
+                    new_mode = msg.get("mode", "quality")
+                    if new_mode in ("fast", "balanced", "quality"):
+                        current_mode = new_mode
+                        await ws.send_json({
+                            "type": "mode_changed",
+                            "mode": current_mode,
+                            "message": f"Switched to {current_mode} mode",
+                        })
+                        logger.info(f"Mode changed to {current_mode}")
 
                 elif msg_type == "session_end":
                     if session_id:
@@ -485,7 +831,7 @@ async def websocket_translate(ws: WebSocket):
                     continue
 
                 try:
-                    stt_result = await transcribe(pcm_data, sample_rate=16000)
+                    stt_result = await transcribe(pcm_data, sample_rate=16000, mode=current_mode)
                 except Exception as e:
                     logger.warning(f"STT failed for chunk {chunk_index}: {e}")
                     continue
@@ -526,6 +872,7 @@ async def websocket_translate(ws: WebSocket):
                         speaker_embedding=voice_embedding,
                         emotion=emotion,
                         target_lang=config.get("target_lang", "hi"),
+                        mode=current_mode,
                     ):
                         await ws.send_bytes(audio_chunk)
                 except Exception as e:

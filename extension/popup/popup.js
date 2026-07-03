@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     "isCapturing",
     "mode",
     "voiceCloning",
+    "qualityMode",
   ]);
 
   if (saved.sourceLang) sourceLang.value = saved.sourceLang;

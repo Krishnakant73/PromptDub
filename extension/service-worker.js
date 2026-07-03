@@ -48,6 +48,7 @@ async function startCapture(tab, platform) {
       "apiKey",
       "mode",
       "voiceCloning",
+      "qualityMode",
     ]);
 
     const volumeConfig = await chrome.storage.local.get([
@@ -70,6 +71,7 @@ async function startCapture(tab, platform) {
         apiKey: config.apiKey,
         platform: platform || "unknown",
         mode: config.mode || "dub",
+        qualityMode: config.qualityMode || "auto",
         voiceCloning: config.voiceCloning !== false,
         originalVolume: volumeConfig.originalVolume != null ? volumeConfig.originalVolume : 0.8,
         dubVolume: volumeConfig.dubVolume != null ? volumeConfig.dubVolume : 1.0,
@@ -159,9 +161,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "toggle-capture") {
     (async () => {
       try {
-        if (message.action === "stop" || isCapturing) {
+        if (message.action === "stop") {
           await stopCapture();
-        } else {
+        } else if (message.action === "start") {
+          if (isCapturing) {
+            await stopCapture();
+          }
           let tabId = null;
           if (sender?.tab?.id) {
             tabId = sender.tab.id;
@@ -253,6 +258,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
       } catch (err) {
         console.error("[PromptDub] Failed to get new stream ID:", err);
+        try {
+          chrome.tabs.sendMessage(activeTabId, {
+            type: "status-update",
+            status: "error",
+            message: "Lost connection to tab. Try refreshing the page.",
+          });
+        } catch {}
         stopCapture();
       }
     })();

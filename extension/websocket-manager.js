@@ -14,6 +14,8 @@ class ReconnectingWebSocket {
     this.onStatus = null;
     this.onReady = null;
     this.onDisconnect = null;
+    this.onReconnect = null;
+    this.isReconnecting = false;
   }
 
   connect() {
@@ -31,7 +33,12 @@ class ReconnectingWebSocket {
 
     this.ws.onopen = () => {
       this.reconnectAttempts = 0;
-      this.onReady?.();
+      if (this.isReconnecting) {
+        this.isReconnecting = false;
+        this.onReconnect?.();
+      } else {
+        this.onReady?.();
+      }
     };
 
     this.ws.onclose = (event) => {
@@ -75,6 +82,7 @@ class ReconnectingWebSocket {
       this.maxReconnectDelay
     );
     this.reconnectAttempts++;
+    this.isReconnecting = true;
 
     this.onStatus?.({
       type: "reconnecting",

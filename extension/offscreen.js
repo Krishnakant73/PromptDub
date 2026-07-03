@@ -1,6 +1,7 @@
 let pipeline = null;
 let wsManager = null;
 let currentConfig = null;
+let pendingResume = false;
 
 chrome.runtime.onMessage.addListener(async (message) => {
   if (message.target !== "offscreen") return;
@@ -24,6 +25,7 @@ function handleVolumeUpdate(msg) {
 async function handleStartCapture(streamId, config) {
   try {
     currentConfig = config;
+    pendingResume = false;
     const isTranslateOnly = config.mode === "translate";
 
     const mediaStream = await navigator.mediaDevices.getUserMedia({
@@ -54,7 +56,7 @@ async function handleStartCapture(streamId, config) {
     };
 
     wsManager.onAudioChunk = (arrayBuffer) => {
-      if (!isTranslateOnly) {
+      if (!isTranslateOnly && pipeline) {
         try { pipeline.playTranslatedAudio(arrayBuffer); } catch (err) {
           console.warn("[PromptDub] Audio chunk play error:", err);
         }
@@ -78,14 +80,25 @@ async function handleStartCapture(streamId, config) {
     };
 
     wsManager.onDisconnect = () => {
-      try {
-        if (pipeline) { pipeline.destroy(); pipeline = null; }
-        chrome.runtime.sendMessage({ type: "request-new-stream" });
-      } catch {}
+      try { chrome.runtime.sendMessage({ type: "request-new-stream" }); } catch {}
+    };
+
+    wsManager.onReconnect = () => {
+      if (pendingResume && wsManager && currentConfig) {
+        pendingResume = false;
+        try {
+          wsManager.ws.send(JSON.stringify({
+            type: "session_resume",
+            session_id: currentConfig.sessionId,
+          }));
+        } catch (err) {
+          console.warn("[PromptDub] session_resume send error:", err);
+        }
+      }
     };
 
     chunkerNode.port.onmessage = (event) => {
-      if (event.data.type === "audio-chunk") {
+      if (event.data.type === "audio-chunk" && wsManager) {
         wsManager.sendAudioChunk(event.data.pcmData, event.data.chunkIndex);
       }
     };
@@ -99,7 +112,7 @@ async function handleStartCapture(streamId, config) {
         sample_rate: 16000,
         channels: 1,
         platform: config.platform || "unknown",
-        mode: config.mode || "dub",
+        mode: config.qualityMode || "auto",
         voice_cloning: config.voiceCloning !== false,
       }));
     };
@@ -113,22 +126,37 @@ async function handleStartCapture(streamId, config) {
 
 async function handleReconnect(newStreamId) {
   if (!currentConfig) return;
+
   if (pipeline) { pipeline.destroy(); pipeline = null; }
+
   try {
     const mediaStream = await navigator.mediaDevices.getUserMedia({
       audio: { mandatory: { chromeMediaSource: "tab", chromeMediaSourceId: newStreamId } },
       video: false,
     });
+
     const isTranslateOnly = currentConfig.mode === "translate";
     pipeline = new AudioDuckingPipeline();
     const chunkerNode = await pipeline.initialize(mediaStream, { translateOnly: isTranslateOnly });
+
     if (currentConfig.originalVolume !== undefined) pipeline.setOriginalVolume(currentConfig.originalVolume);
     if (currentConfig.dubVolume !== undefined) pipeline.setDubVolume(currentConfig.dubVolume);
     if (currentConfig.duckingLevel !== undefined) pipeline.setDuckingLevel(currentConfig.duckingLevel);
+
     chunkerNode.port.onmessage = (event) => {
-      if (event.data.type === "audio-chunk") wsManager.sendAudioChunk(event.data.pcmData, event.data.chunkIndex);
+      if (event.data.type === "audio-chunk" && wsManager) {
+        wsManager.sendAudioChunk(event.data.pcmData, event.data.chunkIndex);
+      }
     };
-    if (wsManager) wsManager.ws.send(JSON.stringify({ type: "session_resume", session_id: currentConfig.sessionId }));
+
+    if (wsManager && wsManager.ws?.readyState === WebSocket.OPEN) {
+      wsManager.ws.send(JSON.stringify({
+        type: "session_resume",
+        session_id: currentConfig.sessionId,
+      }));
+    } else {
+      pendingResume = true;
+    }
   } catch (err) {
     console.error("[PromptDub] Reconnect failed:", err);
     try { chrome.runtime.sendMessage({ type: "capture-error", error: err.message || "Reconnect failed" }); } catch {}
@@ -136,6 +164,7 @@ async function handleReconnect(newStreamId) {
 }
 
 function handleStopCapture() {
+  pendingResume = false;
   try { if (wsManager) { wsManager.close(); wsManager = null; } } catch {}
   try { if (pipeline) { pipeline.destroy(); pipeline = null; } } catch {}
   currentConfig = null;

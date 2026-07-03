@@ -18,6 +18,23 @@ const LANGUAGES = [
   { code: "ar", label: "Arabic" },
   { code: "tr", label: "Turkish" },
   { code: "it", label: "Italian" },
+  { code: "bn", label: "Bengali" },
+  { code: "mr", label: "Marathi" },
+  { code: "te", label: "Telugu" },
+  { code: "kn", label: "Kannada" },
+  { code: "ta", label: "Tamil" },
+  { code: "ml", label: "Malayalam" },
+  { code: "gu", label: "Gujarati" },
+  { code: "pa", label: "Punjabi" },
+  { code: "as", label: "Assamese" },
+  { code: "ne", label: "Nepali" },
+];
+
+const MODES = [
+  { code: "auto", label: "Auto", desc: "Auto-select based on language" },
+  { code: "fast", label: "Fast", desc: "Lowest latency" },
+  { code: "balanced", label: "Balanced", desc: "Good quality and speed" },
+  { code: "quality", label: "Quality", desc: "Best quality" },
 ];
 
 const OVERLAY_ID = "promptdub-overlay";
@@ -29,6 +46,7 @@ const DEFAULT_SETTINGS = {
   targetLang: "hi",
   serverUrl: "ws://localhost:8000/ws/translate",
   mode: "dub",
+  qualityMode: "auto",
   voiceCloning: true,
   showOriginal: true,
   showTranslated: true,
@@ -92,6 +110,12 @@ function getPlayerContainer() {
 function buildLangOptions(selected) {
   return LANGUAGES.map(
     (l) => `<option value="${l.code}"${l.code === selected ? " selected" : ""}>${l.label}</option>`
+  ).join("");
+}
+
+function buildModeOptions(selected) {
+  return MODES.map(
+    (m) => `<option value="${m.code}"${m.code === selected ? " selected" : ""}>${m.label} - ${m.desc}</option>`
   ).join("");
 }
 
@@ -231,6 +255,11 @@ function injectOverlay() {
                 <span class="pd-toggle-hint">OFF = faster start, uses default TTS voice</span>
               </div>
             </div>
+          </div>
+          <div class="pd-field">
+            <label class="pd-label">Quality Mode</label>
+            <select id="pd-quality-mode" class="pd-select"></select>
+            <span class="pd-hint">Fast = low latency, Quality = best sound</span>
           </div>
           <div class="pd-field">
             <label class="pd-label">Stream speaks</label>
@@ -400,16 +429,19 @@ function injectOverlay() {
 
 function loadInitialState() {
   try {
-    chrome.storage.local.get(["sourceLang", "targetLang", "serverUrl", "isCapturing", "mode", "voiceCloning"], (data) => {
+    chrome.storage.local.get(["sourceLang", "targetLang", "serverUrl", "isCapturing", "mode", "voiceCloning", "qualityMode"], (data) => {
       if (chrome.runtime.lastError) return;
       const srcEl = safeGet("pd-source-lang");
       const tgtEl = safeGet("pd-target-lang");
       const srvEl = safeGet("pd-server-url");
+      const modeEl = safeGet("pd-quality-mode");
       if (srcEl) { srcEl.innerHTML = buildLangOptions(data.sourceLang || settings.sourceLang); srcEl.value = data.sourceLang || settings.sourceLang; }
       if (tgtEl) { tgtEl.innerHTML = buildLangOptions(data.targetLang || settings.targetLang); tgtEl.value = data.targetLang || settings.targetLang; }
       if (srvEl) srvEl.value = data.serverUrl || settings.serverUrl;
+      if (modeEl) { modeEl.innerHTML = buildModeOptions(data.qualityMode || settings.qualityMode); modeEl.value = data.qualityMode || settings.qualityMode; }
       if (data.mode) settings.mode = data.mode;
       if (data.voiceCloning !== undefined) settings.voiceCloning = data.voiceCloning;
+      if (data.qualityMode) settings.qualityMode = data.qualityMode;
       isActive = !!data.isCapturing;
       syncOverlayState();
       syncVolumeUI();
@@ -551,7 +583,13 @@ function bindEvents() {
     const label = safeGet("pd-voice-cloning-label");
     if (label) label.textContent = e.target.checked ? "ON — Clone speaker's voice" : "OFF — Default TTS voice";
     saveSettingsToStorage();
-    try { chrome.storage.local.set({ voiceCloning: settings.voiceCloning }); } catch {}
+    syncSettingsToStorage();
+  });
+
+  safeGet("pd-quality-mode")?.addEventListener("change", (e) => {
+    settings.qualityMode = e.target.value;
+    saveSettingsToStorage();
+    syncSettingsToStorage();
   });
 
   safeGet("pd-original-volume")?.addEventListener("input", (e) => { settings.originalVolume = parseInt(e.target.value); safeGet("pd-orig-vol-val").textContent = settings.originalVolume + "%"; saveSettingsToStorage(); sendVolumeUpdate(); });
@@ -629,7 +667,7 @@ function loadSettingsIntoPanel() {
 }
 
 function syncSettingsToStorage() {
-  try { chrome.storage.local.set({ sourceLang: settings.sourceLang, targetLang: settings.targetLang, serverUrl: settings.serverUrl, mode: settings.mode, voiceCloning: settings.voiceCloning }); } catch {}
+  try { chrome.storage.local.set({ sourceLang: settings.sourceLang, targetLang: settings.targetLang, serverUrl: settings.serverUrl, mode: settings.mode, voiceCloning: settings.voiceCloning, qualityMode: settings.qualityMode }); } catch {}
 }
 
 function sendVolumeUpdate() {

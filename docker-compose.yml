@@ -25,8 +25,8 @@ services:
     ports:
       - "8010:8010"
     environment:
-      - MODEL_SIZE=large-v3-turbo
-      - COMPUTE_TYPE=int8
+      - STT_MODEL=deepdml/faster-whisper-large-v3-turbo-ct2
+      - STT_COMPUTE_TYPE=int8
       - DEVICE=cuda
     deploy:
       resources:
@@ -43,8 +43,7 @@ services:
     ports:
       - "8001:8001"
     command: >
-      --model Qwen/Qwen2.5-7B-Instruct-AWQ
-      --quantization awq
+      --model Qwen/Qwen3-8B
       --max-model-len 2048
       --gpu-memory-utilization 0.85
       --port 8001
@@ -59,14 +58,17 @@ services:
               count: 1
               capabilities: [gpu]
         limits:
-          memory: 16G
+          memory: 24G
 
   tts:
     build: ./services/tts
     ports:
       - "8020:8020"
     environment:
-      - COSYVOICE_MODEL_DIR=/models/CosyVoice2-0.5B
+      - COSYVOICE_MODEL_DIR=/models/Fun-CosyVoice3-0.5B
+      - TTS_PROVIDER=both
+      - TTS_LOAD_ALL=true
+      - SVARATTS_MODEL=kenpath/svara-tts-v1
     volumes:
       - model-cache:/models
     deploy:
@@ -77,7 +79,7 @@ services:
               count: 1
               capabilities: [gpu]
         limits:
-          memory: 16G
+          memory: 24G
 
   redis:
     image: valkey/valkey:8.0-alpine

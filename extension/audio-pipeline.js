@@ -14,6 +14,7 @@ class AudioDuckingPipeline {
     this.originalVolume = 0.8;
     this.dubVolume = 1.0;
     this.translateOnly = false;
+    this.destroyed = false;
   }
 
   async initialize(tabMediaStream, options = {}) {
@@ -46,32 +47,30 @@ class AudioDuckingPipeline {
 
   setOriginalVolume(vol) {
     this.originalVolume = Math.max(0, Math.min(1, vol));
-    if (this.originalGain && this.audioCtx) {
-      try {
-        const now = this.audioCtx.currentTime;
-        this.originalGain.gain.cancelScheduledValues(now);
-        this.originalGain.gain.setValueAtTime(this.originalGain.gain.value, now);
-        this.originalGain.gain.linearRampToValueAtTime(this.originalVolume, now + 0.05);
-      } catch { this.originalGain.gain.value = this.originalVolume; }
-    }
+    if (this.destroyed || !this.originalGain || !this.audioCtx) return;
+    try {
+      const now = this.audioCtx.currentTime;
+      this.originalGain.gain.cancelScheduledValues(now);
+      this.originalGain.gain.setValueAtTime(this.originalGain.gain.value, now);
+      this.originalGain.gain.linearRampToValueAtTime(this.originalVolume, now + 0.05);
+    } catch { this.originalGain.gain.value = this.originalVolume; }
   }
 
   setDubVolume(vol) {
     this.dubVolume = Math.max(0, Math.min(1, vol));
-    if (this.translatedGain && this.audioCtx) {
-      try {
-        const now = this.audioCtx.currentTime;
-        this.translatedGain.gain.cancelScheduledValues(now);
-        this.translatedGain.gain.setValueAtTime(this.translatedGain.gain.value, now);
-        this.translatedGain.gain.linearRampToValueAtTime(this.dubVolume, now + 0.05);
-      } catch { this.translatedGain.gain.value = this.dubVolume; }
-    }
+    if (this.destroyed || !this.translatedGain || !this.audioCtx) return;
+    try {
+      const now = this.audioCtx.currentTime;
+      this.translatedGain.gain.cancelScheduledValues(now);
+      this.translatedGain.gain.setValueAtTime(this.translatedGain.gain.value, now);
+      this.translatedGain.gain.linearRampToValueAtTime(this.dubVolume, now + 0.05);
+    } catch { this.translatedGain.gain.value = this.dubVolume; }
   }
 
   setDuckingLevel(level) { this.DUCK_LEVEL = Math.max(0, Math.min(1, level)); }
 
   duckOriginal() {
-    if (!this.audioCtx || !this.originalGain || this.translateOnly) return;
+    if (this.destroyed || !this.audioCtx || !this.originalGain || this.translateOnly) return;
     clearTimeout(this.duckTimeout);
     try {
       const now = this.audioCtx.currentTime;
@@ -82,9 +81,10 @@ class AudioDuckingPipeline {
   }
 
   restoreOriginal() {
-    if (!this.audioCtx || !this.originalGain || this.translateOnly) return;
+    if (this.destroyed || !this.audioCtx || !this.originalGain || this.translateOnly) return;
     clearTimeout(this.duckTimeout);
     this.duckTimeout = setTimeout(() => {
+      if (this.destroyed) return;
       try {
         const now = this.audioCtx.currentTime;
         this.originalGain.gain.cancelScheduledValues(now);
@@ -95,15 +95,20 @@ class AudioDuckingPipeline {
   }
 
   async playTranslatedAudio(pcmArrayBuffer) {
-    if (this.translateOnly) return;
+    if (this.destroyed || this.translateOnly) return;
     this.playbackQueue.push(pcmArrayBuffer);
-    if (!this.isPlaying) { this.isPlaying = true; this.duckOriginal(); await this.processQueue(); }
+    if (!this.isPlaying) {
+      this.isPlaying = true;
+      this.duckOriginal();
+      await this.processQueue();
+    }
   }
 
   async processQueue() {
-    while (this.playbackQueue.length > 0) {
+    while (this.playbackQueue.length > 0 && !this.destroyed) {
       const pcmData = this.playbackQueue.shift();
       try {
+        if (this.destroyed || !this.audioCtx) break;
         const int16Array = new Int16Array(pcmData);
         if (int16Array.length < 100) continue;
         const float32Array = new Float32Array(int16Array.length);
@@ -113,14 +118,21 @@ class AudioDuckingPipeline {
         const bufferSource = this.audioCtx.createBufferSource();
         bufferSource.buffer = audioBuffer;
         bufferSource.connect(this.translatedGain);
-        await new Promise((resolve, reject) => { bufferSource.onended = resolve; bufferSource.onerror = reject; bufferSource.start(); });
-      } catch (err) { console.warn("[PromptDub] Audio playback error:", err); }
+        await new Promise((resolve, reject) => {
+          bufferSource.onended = resolve;
+          bufferSource.onerror = reject;
+          bufferSource.start();
+        });
+      } catch (err) {
+        if (!this.destroyed) console.warn("[PromptDub] Audio playback error:", err);
+      }
     }
     this.isPlaying = false;
-    this.restoreOriginal();
+    if (!this.destroyed) this.restoreOriginal();
   }
 
   destroy() {
+    this.destroyed = true;
     clearTimeout(this.duckTimeout);
     this.playbackQueue = [];
     try { if (this.audioCtx && this.audioCtx.state !== "closed") this.audioCtx.close(); } catch {}
