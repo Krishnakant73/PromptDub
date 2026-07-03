@@ -1,63 +1,61 @@
 import { motion } from "framer-motion";
 import {
   Headphones,
+  Timer,
   Subtitles,
-  Waves,
+  Volume1,
   Shield,
-  Clock,
-  Sparkles,
-  Monitor,
-  Users,
+  MonitorPlay,
 } from "lucide-react";
 
 const features = [
   {
     icon: Headphones,
     title: "Emotional Voice Cloning",
-    description:
-      "Hear the streamer's own voice in your language. CosyVoice 2 captures vocal timbre and emotional nuances — excitement, laughter, whispers.",
+    description: "Retains the emotion, energy & vibe of original voice",
+    color: "from-fuchsia-500/20 to-purple-600/20",
+    ring: "ring-fuchsia-500/15",
+    iconColor: "text-fuchsia-400",
   },
   {
-    icon: Clock,
-    title: "Sub-1.5s Latency",
-    description:
-      "Optimized pipeline with streaming at every stage. Audio chunks overlap, LLM tokens stream directly to TTS — no waiting for full sentences.",
+    icon: Timer,
+    title: "Sub-1s Latency",
+    description: "Real-time translation under 1000ms",
+    color: "from-blue-500/20 to-cyan-600/20",
+    ring: "ring-blue-500/15",
+    iconColor: "text-blue-400",
   },
   {
     icon: Subtitles,
     title: "Dual Subtitles",
-    description:
-      "See both original and translated text overlaid on the video. Original in smaller text, translation in bold — context at a glance.",
+    description: "See both original and translated text side-by-side",
+    color: "from-green-500/20 to-emerald-600/20",
+    ring: "ring-green-500/15",
+    iconColor: "text-green-400",
   },
   {
-    icon: Waves,
+    icon: Volume1,
     title: "Smart Audio Ducking",
-    description:
-      "Original audio fades to 20% while translated voice plays at full volume. Smooth 150ms ramps — no jarring cuts.",
+    description: "Auto-lowers music & background for clear voice",
+    color: "from-orange-500/20 to-amber-600/20",
+    ring: "ring-orange-500/15",
+    iconColor: "text-orange-400",
   },
   {
     icon: Shield,
     title: "100% Open Source AI",
-    description:
-      "Faster-Whisper, Qwen-2.5, CosyVoice 2 — no proprietary APIs, no data sent to third parties. Self-host the entire stack.",
+    description: "Privacy-first AI models you can trust",
+    color: "from-violet-500/20 to-purple-600/20",
+    ring: "ring-violet-500/15",
+    iconColor: "text-violet-400",
   },
   {
-    icon: Sparkles,
-    title: "Context-Aware Translation",
-    description:
-      "Rolling context window ensures coherent translations. Slang, idioms, and cultural references are adapted — not just word-swapped.",
-  },
-  {
-    icon: Monitor,
+    icon: MonitorPlay,
     title: "YouTube & Twitch",
-    description:
-      "Works on both platforms out of the box. Detects the player automatically and overlays subtitles in the right position.",
-  },
-  {
-    icon: Users,
-    title: "Multi-Speaker Support",
-    description:
-      "Voice embedding adapts to speaker changes. Each speaker gets their own cloned voice profile for natural conversations.",
+    description: "Works across all major streaming platforms",
+    color: "from-red-500/20 to-pink-600/20",
+    ring: "ring-red-500/15",
+    iconColor: "text-red-400",
   },
 ];
 
@@ -76,12 +74,8 @@ const item = {
 
 export default function Features() {
   return (
-    <section id="features" className="relative py-24 md:py-32">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute top-1/2 left-1/4 h-[500px] w-[500px] -translate-y-1/2 rounded-full bg-violet-600/10 blur-[120px]" />
-      </div>
-
-      <div className="relative mx-auto max-w-7xl px-6">
+    <section id="features" className="relative py-20 md:py-28">
+      <div className="mx-auto max-w-7xl px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -89,12 +83,12 @@ export default function Features() {
           transition={{ duration: 0.5 }}
           className="text-center"
         >
-          <span className="text-sm font-medium uppercase tracking-widest text-fuchsia-400">
+          <span className="text-[12px] font-semibold uppercase tracking-[3px] text-purple-400">
             Features
           </span>
-          <h2 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">
+          <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-[42px]">
             Everything You Need for{" "}
-            <span className="bg-gradient-to-r from-fuchsia-400 to-pink-400 bg-clip-text text-transparent">
+            <span className="bg-linear-to-r from-[#ff5500] via-[#ff0055] to-[#cc00aa] bg-clip-text text-transparent">
               Global Streams
             </span>
           </h2>
@@ -105,19 +99,25 @@ export default function Features() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true }}
-          className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4"
+          className="mt-14 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6"
         >
           {features.map((f) => (
             <motion.div
               key={f.title}
               variants={item}
-              className="group rounded-2xl border border-white/5 bg-zinc-900/40 p-6 transition-all hover:border-white/10 hover:bg-zinc-900/70"
+              className="group flex flex-col items-center rounded-2xl border border-purple-500/10 bg-[#0a0a1a]/80 p-5 text-center transition-all hover:border-purple-500/20"
             >
-              <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 text-violet-400 transition-colors group-hover:text-violet-300">
-                <f.icon size={20} />
+              {/* Icon circle */}
+              <div
+                className={`mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-linear-to-br ${f.color} ring-1 ${f.ring}`}
+              >
+                <f.icon size={22} className={f.iconColor} />
               </div>
-              <h3 className="text-base font-semibold">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+
+              <h3 className="text-[13px] font-semibold leading-tight text-white">
+                {f.title}
+              </h3>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-500">
                 {f.description}
               </p>
             </motion.div>

@@ -3,7 +3,7 @@
 @layer base {
   * {
     scrollbar-width: thin;
-    scrollbar-color: #27272a transparent;
+    scrollbar-color: #1a1a2e transparent;
   }
 
   html {
@@ -13,11 +13,62 @@
   }
 
   body {
-    background-color: #09090b;
-    color: #fafafa;
+    background-color: #050510;
+    color: #e2e8f0;
   }
 
   ::selection {
-    background-color: rgba(139, 92, 246, 0.3);
+    background-color: rgba(168, 85, 247, 0.3);
+  }
+}
+
+@layer utilities {
+  .text-gradient-primary {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a9e, #cc44cc);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-gradient-cta {
+    background: linear-gradient(135deg, #ff5500, #ff0055);
+  }
+
+  .bg-gradient-cta:hover {
+    background: linear-gradient(135deg, #ff6611, #ff1166);
+  }
+
+  .card-glass {
+    background: rgba(12, 12, 30, 0.8);
+    border: 1px solid rgba(139, 92, 246, 0.12);
+    backdrop-filter: blur(12px);
+  }
+
+  .glow-purple {
+    box-shadow: 0 0 80px rgba(139, 92, 246, 0.15), 0 0 160px rgba(139, 92, 246, 0.05);
+  }
+
+  .waveform-line {
+    animation: wave 2s ease-in-out infinite;
+  }
+
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.3); }
+    50% { transform: scaleY(1); }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-12px); }
+  }
+
+  @keyframes float-slow {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
   }
 }

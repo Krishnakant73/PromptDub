@@ -108,14 +108,14 @@ const faqs = [
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-[#09090b] text-white font-[Inter,system-ui,sans-serif]">
+    <div className="min-h-screen bg-[#050510] text-white font-[Inter,system-ui,sans-serif]">
       <Navbar />
 
       <section className="pt-32 pb-20">
         <div className="mx-auto max-w-7xl px-6">
           <Link
             to="/"
-            className="mb-8 inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-white"
+            className="mb-8 inline-flex items-center gap-1 text-sm text-zinc-600 transition-colors hover:text-white"
           >
             <ArrowLeft size={14} />
             Back to Home
@@ -129,66 +129,61 @@ export default function PricingPage() {
           >
             <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
               Choose Your{" "}
-              <span className="bg-gradient-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
                 Plan
               </span>
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-zinc-400">
+            <p className="mx-auto mt-4 max-w-xl text-[15px] text-zinc-500">
               Start free. Upgrade when you need more. Cancel anytime.
             </p>
           </motion.div>
 
-          <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {tiers.map((tier, i) => (
               <motion.div
                 key={tier.name}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: i * 0.1 }}
-                className={`relative rounded-2xl border p-6 ${
+                className={`relative flex flex-col rounded-2xl border p-6 ${
                   tier.popular
-                    ? "border-violet-500/40 bg-zinc-900/80 shadow-xl shadow-violet-500/10"
-                    : "border-white/5 bg-zinc-900/40"
+                    ? "border-purple-500/30 bg-[#0f0a20] shadow-xl shadow-purple-500/10"
+                    : "border-purple-500/10 bg-[#0a0a1a]/80"
                 }`}
               >
                 {tier.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-1 text-xs font-semibold text-white">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-linear-to-r from-[#ff5500] to-[#ff0055] px-4 py-1 text-[11px] font-semibold text-white">
                     Most Popular
                   </div>
                 )}
 
-                <h3 className="text-lg font-semibold">{tier.name}</h3>
-                <div className="mt-2 flex items-baseline gap-1">
-                  <span className="text-4xl font-bold">{tier.price}</span>
-                  <span className="text-sm text-zinc-500">{tier.period}</span>
+                <h3 className="text-[15px] font-semibold text-zinc-300">{tier.name}</h3>
+                <div className="mt-2 flex items-baseline gap-0.5">
+                  <span className="text-[36px] font-bold">{tier.price}</span>
+                  <span className="text-[14px] text-zinc-500">{tier.period}</span>
                 </div>
-                <p className="mt-2 text-sm text-zinc-500">
-                  {tier.description}
-                </p>
+                <p className="mt-1.5 text-[12px] text-zinc-600">{tier.description}</p>
 
-                <div className="mt-6 space-y-2.5">
+                <div className="mt-6 flex-1 space-y-2.5">
                   {tier.features.map((f) => (
-                    <div key={f} className="flex items-center gap-2 text-sm">
-                      <Check
-                        size={16}
-                        className="flex-shrink-0 text-emerald-400"
-                      />
-                      <span className="text-zinc-300">{f}</span>
+                    <div key={f} className="flex items-center gap-2.5 text-[13px]">
+                      <Check size={14} className="shrink-0 text-emerald-400" />
+                      <span className="text-zinc-400">{f}</span>
                     </div>
                   ))}
                   {tier.excluded.map((f) => (
-                    <div key={f} className="flex items-center gap-2 text-sm">
-                      <X size={16} className="flex-shrink-0 text-zinc-700" />
-                      <span className="text-zinc-600">{f}</span>
+                    <div key={f} className="flex items-center gap-2.5 text-[13px]">
+                      <X size={14} className="shrink-0 text-zinc-700" />
+                      <span className="text-zinc-700">{f}</span>
                     </div>
                   ))}
                 </div>
 
                 <button
-                  className={`mt-8 w-full rounded-xl py-2.5 text-sm font-semibold transition-all ${
+                  className={`mt-7 w-full rounded-xl py-2.5 text-[13px] font-semibold transition-all ${
                     tier.popular
-                      ? "bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40"
-                      : "border border-white/10 bg-white/5 text-zinc-300 hover:bg-white/10"
+                      ? "bg-linear-to-r from-[#ff5500] to-[#ff0055] text-white shadow-lg shadow-red-500/20 hover:shadow-red-500/30"
+                      : "border border-purple-500/15 bg-purple-500/5 text-zinc-300 hover:border-purple-500/30 hover:bg-purple-500/10"
                   }`}
                 >
                   {tier.cta}
@@ -199,7 +194,7 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className="border-t border-white/5 py-24">
+      <section className="border-t border-purple-500/10 py-20">
         <div className="mx-auto max-w-3xl px-6">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -210,7 +205,7 @@ export default function PricingPage() {
             Frequently Asked Questions
           </motion.h2>
 
-          <div className="space-y-6">
+          <div className="space-y-5">
             {faqs.map((faq, i) => (
               <motion.div
                 key={i}
@@ -218,12 +213,10 @@ export default function PricingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.05 }}
-                className="rounded-xl border border-white/5 bg-zinc-900/40 p-6"
+                className="rounded-xl border border-purple-500/10 bg-[#0a0a1a]/80 p-6"
               >
-                <h3 className="text-base font-semibold">{faq.q}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-400">
-                  {faq.a}
-                </p>
+                <h3 className="text-[15px] font-semibold">{faq.q}</h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">{faq.a}</p>
               </motion.div>
             ))}
           </div>
