@@ -13,11 +13,12 @@ class TTSClient:
         speaker_embedding: bytes | None,
         emotion: str = "neutral",
         target_lang: str = "en",
+        speed: float = 1.0,
     ) -> AsyncIterator[bytes]:
         async with self.client.stream(
             "POST",
             f"{self.base_url}/synthesize/stream",
-            content=self._build_request(text, speaker_embedding, emotion, target_lang),
+            content=self._build_request(text, speaker_embedding, emotion, target_lang, speed),
             headers={"Content-Type": "application/octet-stream"},
         ) as response:
             response.raise_for_status()
@@ -30,6 +31,7 @@ class TTSClient:
         speaker_embedding: bytes | None,
         emotion: str,
         target_lang: str,
+        speed: float = 1.0,
     ) -> bytes:
         import json
         import struct
@@ -39,6 +41,7 @@ class TTSClient:
             "emotion": emotion,
             "target_lang": target_lang,
             "has_embedding": speaker_embedding is not None,
+            "speed": speed,
         }).encode("utf-8")
 
         meta_len = struct.pack("<I", len(metadata))

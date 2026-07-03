@@ -42,14 +42,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     const isCapturing = (await chrome.storage.local.get("isCapturing"))
       .isCapturing;
 
+    let platform = "unknown";
+    if (tab.url.includes("youtube.com")) platform = "youtube";
+    else if (tab.url.includes("twitch.tv")) platform = "twitch";
+
     if (isCapturing) {
       await chrome.storage.local.set({ isCapturing: false });
-      chrome.runtime.sendMessage({ type: "toggle-capture", tabId: tab.id });
+      chrome.runtime.sendMessage({
+        type: "toggle-capture",
+        tabId: tab.id,
+        platform,
+      });
       setReadyState();
     } else {
       await save();
       await chrome.storage.local.set({ isCapturing: true });
-      chrome.runtime.sendMessage({ type: "toggle-capture", tabId: tab.id });
+      chrome.runtime.sendMessage({
+        type: "toggle-capture",
+        tabId: tab.id,
+        platform,
+      });
       setActiveState();
     }
 

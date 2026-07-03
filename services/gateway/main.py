@@ -89,21 +89,39 @@ async def websocket_translate(ws: WebSocket):
                     session_id = msg["session_id"]
                     user_id = msg.get("user_id", "anonymous")
                     config = msg
+                    voice_cloning_enabled = msg.get("voice_cloning", True)
+                    tier = msg.get("tier", "personal")
+                    speed_boost = msg.get("speed_boost", False)
 
                     await state.create_session(session_id, user_id, {
                         "source_lang": msg.get("source_lang", "auto"),
                         "target_lang": msg.get("target_lang", "hi"),
                         "platform": msg.get("platform", "youtube"),
                         "started_at": time.time(),
+                        "voice_cloning": voice_cloning_enabled,
+                        "tier": tier,
+                        "speed_boost": speed_boost,
                     })
 
-                    await ws.send_json({
-                        "type": "session_ready",
-                        "session_id": session_id,
-                        "status": "initializing",
-                        "message": "Building voice profile... (5 seconds)",
-                    })
-                    logger.info(f"Session started: {session_id}")
+                    if not voice_cloning_enabled:
+                        voice_ready = True
+                        voice_embedding = None
+                        await ws.send_json({
+                            "type": "voice_ready",
+                            "session_id": session_id,
+                            "quality_score": 0.0,
+                            "voice_cloning": False,
+                            "message": "Voice cloning disabled — using default TTS voice",
+                        })
+                        logger.info(f"Session started (no voice cloning): {session_id}")
+                    else:
+                        await ws.send_json({
+                            "type": "session_ready",
+                            "session_id": session_id,
+                            "status": "initializing",
+                            "message": "Building voice profile... (5 seconds)",
+                        })
+                        logger.info(f"Session started: {session_id}")
 
                 elif msg_type == "session_resume":
                     session_id = msg["session_id"]
@@ -121,7 +139,7 @@ async def websocket_translate(ws: WebSocket):
                 elif msg_type == "session_end":
                     if session_id:
                         await state.end_session(session_id)
-                        logger.info(f"Session ended: {session_id}")
+                        logger.info(f"Session ended: {session_id} (tier: {tier})")
                     break
 
             elif "bytes" in data:
@@ -145,6 +163,10 @@ async def websocket_translate(ws: WebSocket):
 
                 # Phase 1: Voice embedding collection (first 5 seconds)
                 if not voice_ready:
+                    if not voice_cloning_enabled:
+                        voice_ready = True
+                        continue
+
                     voice_sample_buffer.extend(pcm_data)
                     chunks_for_embedding += 1
 
@@ -223,6 +245,7 @@ async def websocket_translate(ws: WebSocket):
                         speaker_embedding=voice_embedding,
                         emotion=emotion,
                         target_lang=config.get("target_lang", "hi"),
+                        speed=1.2 if speed_boost else 1.0,
                     ):
                         await ws.send_bytes(audio_chunk)
                 except Exception as e:
