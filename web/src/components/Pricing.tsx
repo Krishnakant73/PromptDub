@@ -1,169 +1,195 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
-import { Link } from "react-router-dom";
 
 const plans = [
   {
     name: "Free",
-    price: "$0",
-    period: "/mo",
-    description: "Try live translation on your favorite streams",
+    description: "For casual viewers",
+    price: { monthly: 0, annual: 0 },
     features: [
-      "30 min/day translation",
-      "2 languages",
-      "Basic subtitles",
-      "Public pipeline",
+      "60 minutes per month",
+      "1 concurrent session",
+      "5 languages",
+      "Basic voice cloning",
+      "Chrome extension",
     ],
-    cta: "Install Free",
+    cta: "Get Started",
     popular: false,
   },
   {
     name: "Starter",
-    price: "$9",
-    period: "/mo",
-    description: "For regular viewers who want more",
+    description: "For regular viewers",
+    price: { monthly: 9.99, annual: 7.99 },
     features: [
-      "30 hrs/month",
-      "All 23 languages",
-      "Dual subtitles",
-      "Priority servers",
+      "300 minutes per month",
+      "2 concurrent sessions",
+      "10 languages",
+      "Enhanced voice cloning",
+      "Priority support",
     ],
-    cta: "Start 7-Day Trial",
+    cta: "Start Free Trial",
     popular: false,
   },
   {
     name: "Pro",
-    price: "$29",
-    period: "/mo",
-    description: "Unlimited translation for power users & creators",
+    description: "For power users & streamers",
+    price: { monthly: 19.99, annual: 15.99 },
     features: [
-      "Unlimited translation",
-      "All 23 languages",
-      "Voice cloning",
-      "Priority servers",
-      "All features",
+      "Unlimited minutes",
+      "5 concurrent sessions",
+      "23+ languages",
+      "Advanced voice cloning",
+      "API access",
+      "Priority support",
     ],
-    cta: "Go Pro",
+    cta: "Start Free Trial",
     popular: true,
   },
   {
     name: "Enterprise",
-    price: "Custom",
-    period: "",
-    description: "For teams or dedicated deployments",
+    description: "For teams & organizations",
+    price: { monthly: null, annual: null },
     features: [
-      "Everything in Pro",
-      "Self-hosted option",
-      "Dedicated GPU cluster",
-      "Custom model fine-tuning",
-      "SLA & premium support",
+      "Custom minutes",
+      "Unlimited sessions",
+      "23+ languages",
+      "Custom voice models",
+      "Dedicated infrastructure",
+      "SLA & support",
     ],
     cta: "Contact Sales",
     popular: false,
   },
 ];
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 20 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-};
-
 export default function Pricing() {
-  return (
-    <section id="pricing" className="relative py-20 md:py-28">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute top-1/3 left-1/2 h-150 w-150 -translate-x-1/2 rounded-full bg-purple-800/10 blur-[150px]" />
-      </div>
+  const [annual, setAnnual] = useState(true);
 
-      <div className="relative mx-auto max-w-7xl px-6">
+  return (
+    <section id="pricing" className="relative section-padding">
+      <div className="mx-auto max-w-7xl px-6">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center"
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="mx-auto max-w-2xl text-center"
         >
-          <span className="text-[12px] font-semibold uppercase tracking-[3px] text-purple-400">
+          <span className="micro-label text-[#7C3AED]">
             Pricing
           </span>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-[42px]">
-            Simple,{" "}
-            <span className="text-white">Transparent</span>{" "}
-            Pricing
+          <h2 className="heading-2 mt-4 text-balance">
+            Simple pricing for
+            <br />
+            every viewer
           </h2>
+          <p className="body-md mt-5 text-[#A1A1AA]">
+            Start free. Upgrade when you need more minutes, languages, or
+            concurrent sessions.
+          </p>
         </motion.div>
 
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4"
-        >
-          {plans.map((plan) => (
+        {/* Toggle */}
+        <div className="mt-10 flex items-center justify-center gap-3">
+          <span
+            className={`text-[14px] font-medium transition-colors ${
+              !annual ? "text-white" : "text-[#A1A1AA]"
+            }`}
+          >
+            Monthly
+          </span>
+          <button
+            onClick={() => setAnnual(!annual)}
+            className="relative h-7 w-12 rounded-full bg-[#17171B] border border-white/[0.08] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C3AED] focus-visible:ring-offset-2 focus-visible:ring-offset-[#09090B]"
+            aria-label={`Switch to ${annual ? "monthly" : "annual"} billing`}
+          >
+            <motion.div
+              className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white"
+              animate={{ x: annual ? 20 : 0 }}
+              transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            />
+          </button>
+          <span
+            className={`text-[14px] font-medium transition-colors ${
+              annual ? "text-white" : "text-[#A1A1AA]"
+            }`}
+          >
+            Annual
+          </span>
+          {annual && (
+            <span className="ml-2 rounded-full bg-[#22C55E]/10 px-3 py-1 text-[12px] font-semibold text-[#22C55E]">
+              Save 20%
+            </span>
+          )}
+        </div>
+
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {plans.map((plan, i) => (
             <motion.div
               key={plan.name}
-              variants={item}
-              className={`relative flex flex-col rounded-2xl border p-6 transition-all ${
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{
+                duration: 0.5,
+                delay: i * 0.08,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className={`glass-card rounded-2xl p-6 ${
                 plan.popular
-                  ? "border-purple-500/30 bg-[#0f0a20] shadow-xl shadow-purple-500/10"
-                  : "border-purple-500/10 bg-[#0a0a1a]/80 hover:border-purple-500/20"
+                  ? "border-[#7C3AED]/30 bg-[#7C3AED]/5 shadow-[0_0_40px_rgba(124,58,237,0.1)]"
+                  : ""
               }`}
             >
-              {/* Most Popular badge */}
               {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-linear-to-r from-[#ff5500] to-[#ff0055] px-4 py-1 text-[11px] font-semibold text-white">
+                <div className="mb-4 inline-flex rounded-full bg-[#7C3AED] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white">
                   Most Popular
                 </div>
               )}
 
-              <div className="mb-5">
-                <h3 className="text-[15px] font-semibold text-zinc-300">
-                  {plan.name}
-                </h3>
-                <div className="mt-2 flex items-baseline gap-0.5">
-                  <span className="text-[36px] font-bold text-white">
-                    {plan.price}
-                  </span>
-                  <span className="text-[14px] text-zinc-500">{plan.period}</span>
-                </div>
-                <p className="mt-1.5 text-[12px] text-zinc-600">
-                  {plan.description}
-                </p>
-              </div>
+              <h3 className="text-[16px] font-semibold text-white">
+                {plan.name}
+              </h3>
+              <p className="caption mt-1 text-[#A1A1AA]">
+                {plan.description}
+              </p>
 
-              {/* Feature list */}
-              <div className="flex-1 space-y-3">
-                {plan.features.map((f) => (
-                  <div key={f} className="flex items-center gap-2.5 text-[13px]">
-                    <Check size={14} className="shrink-0 text-emerald-400" />
-                    <span className="text-zinc-400">{f}</span>
+              <div className="mt-6 mb-6">
+                {plan.price.monthly !== null ? (
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[36px] font-bold text-white">
+                      ${annual ? plan.price.annual : plan.price.monthly}
+                    </span>
+                    <span className="body-sm text-[#A1A1AA]">/mo</span>
                   </div>
-                ))}
+                ) : (
+                  <div className="text-[36px] font-bold text-white">Custom</div>
+                )}
               </div>
 
-              {/* CTA button */}
-              <Link
-                to="/pricing"
-                className={`mt-7 block rounded-xl py-2.5 text-center text-[13px] font-semibold transition-all ${
+              <ul className="mb-6 space-y-3">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-center gap-3">
+                    <Check size={16} className="shrink-0 text-[#22C55E]" />
+                    <span className="body-sm text-[#A1A1AA]">{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <a
+                href="#"
+                className={`magnetic-btn block w-full rounded-xl py-3 text-center text-[14px] font-semibold transition-all duration-300 ${
                   plan.popular
-                    ? "bg-linear-to-r from-[#ff5500] to-[#ff0055] text-white shadow-lg shadow-red-500/20 hover:shadow-red-500/30"
-                    : "border border-purple-500/15 bg-purple-500/5 text-zinc-300 hover:border-purple-500/30 hover:bg-purple-500/10"
+                    ? "btn-primary"
+                    : "btn-secondary"
                 }`}
               >
                 {plan.cta}
-              </Link>
+              </a>
             </motion.div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );

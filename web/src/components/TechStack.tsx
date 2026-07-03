@@ -1,38 +1,25 @@
 import { motion } from "framer-motion";
-import { Mic, Languages, Volume2, Server } from "lucide-react";
 
 const stacks = [
   {
-    icon: Mic,
+    image: "/assets/speech_to_text.png",
     title: "Speech-to-Text",
     items: ["Faster Whisper", "OpenAI Whisper", "EfficientWhisper"],
-    iconColor: "text-blue-400",
-    ring: "ring-blue-500/15",
-    bg: "from-blue-500/20 to-cyan-600/20",
   },
   {
-    icon: Languages,
+    image: "/assets/translation_cube.png",
     title: "Translation",
     items: ["Gemma 2B/7B", "LLM", "Context Window 16k+"],
-    iconColor: "text-purple-400",
-    ring: "ring-purple-500/15",
-    bg: "from-purple-500/20 to-fuchsia-600/20",
   },
   {
-    icon: Volume2,
+    image: "/assets/voice_synthesis.png",
     title: "Voice Synthesis",
     items: ["CosyVoice 2", "ChatTTS", "Emotional Transfer"],
-    iconColor: "text-fuchsia-400",
-    ring: "ring-fuchsia-500/15",
-    bg: "from-fuchsia-500/20 to-pink-600/20",
   },
   {
-    icon: Server,
+    image: "/assets/infra_cube.png",
     title: "Infrastructure",
     items: ["FastAPI", "Redis + Celery", "PostgreSQL"],
-    iconColor: "text-emerald-400",
-    ring: "ring-emerald-500/15",
-    bg: "from-emerald-500/20 to-green-600/20",
   },
 ];
 
@@ -92,18 +79,20 @@ export default function TechStack() {
               variants={item}
               className="group rounded-2xl border border-purple-500/10 bg-[#0a0a1a]/80 p-6 transition-all hover:border-purple-500/20"
             >
-              {/* Icon */}
-              <div
-                className={`mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br ${stack.bg} ring-1 ${stack.ring}`}
-              >
-                <stack.icon size={20} className={stack.iconColor} />
+              {/* 3D rendered icon */}
+              <div className="mb-5 flex h-16 w-16 items-center justify-center">
+                <img
+                  src={stack.image}
+                  alt={stack.title}
+                  className="h-full w-full object-contain drop-shadow-[0_0_15px_rgba(147,51,234,0.25)]"
+                  draggable={false}
+                />
               </div>
 
               <h3 className="text-[15px] font-semibold text-white">
                 {stack.title}
               </h3>
 
-              {/* Bullet list */}
               <ul className="mt-4 space-y-2.5">
                 {stack.items.map((tech) => (
                   <li key={tech} className="flex items-center gap-2.5 text-[13px]">
@@ -125,8 +114,8 @@ export default function TechStack() {
           className="mt-10 rounded-xl border border-purple-500/10 bg-[#0a0a1a]/60 px-6 py-4 text-center"
         >
           <p className="text-[13px] text-zinc-500">
-            All 2.8 models run in under{" "}
-            <span className="font-semibold text-white">120 W VRAM</span> — 180K+
+            All models run in under{" "}
+            <span className="font-semibold text-white">120 W VRAM</span> — 160K+
             16-bit VRAM all model. Total pipeline latency:{" "}
             <span className="font-semibold text-purple-400">250–400ms</span>
           </p>

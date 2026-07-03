@@ -1,170 +1,160 @@
 import { motion } from "framer-motion";
-import { ArrowRight, Play, Globe, Zap, Mic } from "lucide-react";
+import { ArrowRight, Play, Sparkles } from "lucide-react";
 
-const floatingLabels = [
-  { text: "العربية", top: "8%", right: "15%", delay: 0 },
-  { text: "हिन्दी", top: "12%", right: "-5%", delay: 0.3 },
-  { text: "Español", top: "35%", left: "5%", delay: 0.5 },
-  { text: "Français", top: "30%", right: "-12%", delay: 0.7 },
-  { text: "العربیة", bottom: "35%", left: "0%", delay: 0.4 },
-  { text: "日本語", bottom: "20%", right: "-8%", delay: 0.6 },
-  { text: "Português", bottom: "12%", left: "15%", delay: 0.8 },
+const stats = [
+  { value: "23+", label: "Languages" },
+  { value: "<1s", label: "Latency" },
+  { value: "5s", label: "Voice Clone" },
+  { value: "100%", label: "Open Source" },
 ];
 
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden pt-28 pb-16 md:pt-36 md:pb-24">
-      {/* Background glow effects */}
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute top-0 left-1/2 h-[700px] w-[900px] -translate-x-1/2 rounded-full bg-purple-900/20 blur-[150px]" />
-        <div className="absolute top-20 right-0 h-[400px] w-[400px] rounded-full bg-fuchsia-900/15 blur-[120px]" />
-        <div className="absolute bottom-0 left-0 h-[300px] w-[300px] rounded-full bg-purple-800/10 blur-[100px]" />
-      </div>
+    <section className="relative overflow-hidden pt-32 pb-24 md:pt-44 md:pb-32">
+      <div className="hero-glow" />
+
+      <div className="pointer-events-none absolute inset-0 grid-pattern opacity-40" />
 
       <div className="relative mx-auto max-w-7xl px-6">
-        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          {/* Left side - Text content */}
-          <div>
+        <div className="grid items-center gap-16 lg:grid-cols-2 lg:gap-20">
+          {/* Left - Copy */}
+          <div className="max-w-xl">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/10 px-4 py-1.5 text-[13px] text-purple-300"
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-[#111113] px-4 py-1.5"
             >
-              <Zap size={13} className="text-yellow-400" />
-              <span>Real-time AI Translation &middot; Under 1s Latency</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-[#22C55E] animate-pulse" />
+              <span className="caption text-[#A1A1AA]">
+                Now in public beta
+              </span>
             </motion.div>
 
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-[42px] font-extrabold leading-[1.1] tracking-tight md:text-[56px]"
+              transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+              className="heading-1 text-balance"
             >
-              Hear Any Stream
+              Hear any stream
               <br />
-              <span className="bg-linear-to-r from-[#ff5500] via-[#ff0055] to-[#cc00aa] bg-clip-text text-transparent">
-                In Your Language
-              </span>
+              <span className="gradient-accent">in your language</span>
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="mt-5 max-w-lg text-[15px] leading-relaxed text-zinc-400"
+              transition={{ duration: 0.7, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="body-lg mt-6 text-[#A1A1AA]"
             >
-              AI-powered live translation with emotional voice cloning
-              for YouTube and Twitch. The streamer speaks — you
-              hear their voice in your language, with every emotion
-              preserved.
+              Real-time AI translation with emotional voice cloning for live
+              streams. The streamer speaks — you hear their voice in your
+              language, with every emotion preserved.
             </motion.p>
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="mt-8 flex flex-wrap items-center gap-4"
+              transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-10 flex flex-wrap items-center gap-4"
             >
-              <a
-                href="#"
-                className="group flex items-center gap-2 rounded-xl bg-linear-to-r from-[#ff5500] to-[#ff0055] px-7 py-3 text-[14px] font-semibold text-white shadow-xl shadow-red-500/20 transition-all hover:shadow-red-500/30"
-              >
+              <a href="#" className="btn-primary group">
                 Install Free Extension
                 <ArrowRight
                   size={16}
-                  className="transition-transform group-hover:translate-x-1"
+                  className="transition-transform duration-300 group-hover:translate-x-0.5"
                 />
               </a>
-              <a
-                href="#how-it-works"
-                className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-7 py-3 text-[14px] font-medium text-zinc-300 backdrop-blur-sm transition-all hover:border-white/20 hover:bg-white/10"
-              >
-                <Play size={16} fill="currentColor" />
-                See How It Works
+              <a href="#how-it-works" className="btn-secondary group">
+                <Play size={15} className="text-[#7C3AED]" />
+                Watch Demo
               </a>
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="mt-8 flex items-center gap-6 text-[13px] text-zinc-500"
+              transition={{ duration: 0.7, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-12 flex items-center gap-8"
             >
-              <div className="flex items-center gap-2">
-                <Globe size={14} className="text-purple-400" />
-                <span>23+ Languages</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Zap size={14} className="text-yellow-400" />
-                <span>&lt;1s Latency</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mic size={14} className="text-fuchsia-400" />
-                <span>100% Voice Match AI</span>
-              </div>
+              {stats.map((stat, i) => (
+                <div key={stat.label} className={`stagger-${i + 1}`}>
+                  <div className="text-[20px] font-bold text-white">
+                    {stat.value}
+                  </div>
+                  <div className="caption text-[#A1A1AA]">
+                    {stat.label}
+                  </div>
+                </div>
+              ))}
             </motion.div>
           </div>
 
-          {/* Right side - Hero image with floating labels */}
+          {/* Right - Hero visual */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
+            transition={{ duration: 1, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="relative flex items-center justify-center"
           >
-            {/* Glowing circle behind headphones */}
-            <div className="relative">
-              <div className="absolute inset-0 rounded-full bg-purple-600/20 blur-[60px]" />
-              <div className="relative flex h-[340px] w-[340px] items-center justify-center rounded-full border border-purple-500/10 bg-linear-to-b from-purple-900/30 to-transparent md:h-[420px] md:w-[420px]">
-                {/* Inner circle */}
-                <div className="flex h-[220px] w-[220px] items-center justify-center rounded-full border border-purple-500/15 bg-linear-to-b from-purple-800/20 to-purple-900/10 md:h-[280px] md:w-[280px]">
-                  {/* Headphone icon */}
-                  <div className="relative">
-                    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" className="md:h-[160px] md:w-[160px]">
-                      <path d="M20 65C20 43.46 37.46 26 59 26h2c21.54 0 39 17.46 39 39v20c0 5.52-4.48 10-10 10h-6c-3.31 0-6-2.69-6-6V75c0-3.31 2.69-6 6-6h6v-4c0-16.02-12.98-29-29-29h-2c-16.02 0-29 12.98-29 29v4h6c3.31 0 6 2.69 6 6v14c0 3.31-2.69 6-6 6h-6c-5.52 0-10-4.48-10-10V65z" fill="url(#headphone-grad)" />
-                      <defs>
-                        <linearGradient id="headphone-grad" x1="20" y1="26" x2="100" y2="95" gradientUnits="userSpaceOnUse">
-                          <stop stopColor="#a855f7" />
-                          <stop offset="1" stopColor="#7c3aed" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                    {/* Glow around headphones */}
-                    <div className="absolute -inset-4 rounded-full bg-purple-500/10 blur-xl" />
+            <div className="relative animate-float">
+              {/* Main product visualization */}
+              <div className="relative glass-card rounded-[32px] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7C3AED]/20">
+                    <Sparkles size={24} className="text-[#7C3AED]" />
+                  </div>
+                  <div>
+                    <div className="text-[15px] font-semibold text-white">
+                      Live Translation
+                    </div>
+                    <div className="caption text-[#A1A1AA]">
+                      Voice cloning active
+                    </div>
+                  </div>
+                  <div className="ml-auto flex h-3 w-3 rounded-full bg-[#22C55E] animate-pulse" />
+                </div>
+
+                {/* Translation preview */}
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#17171B] text-[12px] font-bold text-[#A1A1AA]">
+                      EN
+                    </div>
+                    <div className="glass-surface rounded-2xl rounded-tl-md px-4 py-3 text-[14px] text-[#A1A1AA]">
+                      "This new feature is going to change everything!"
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#7C3AED]/20 text-[12px] font-bold text-[#7C3AED]">
+                      JA
+                    </div>
+                    <div className="glass-surface rounded-2xl rounded-tl-md px-4 py-3 text-[14px] text-white border border-[#7C3AED]/20">
+                      "この新機能は全てを変えてしまう！"
+                    </div>
                   </div>
                 </div>
 
-                {/* Circular track lines */}
-                <div className="absolute inset-2 rounded-full border border-purple-500/5" />
-                <div className="absolute inset-6 rounded-full border border-purple-500/5" />
+                {/* Audio wave visualization */}
+                <div className="mt-6 flex items-center gap-1 h-8">
+                  {Array.from({ length: 24 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="w-1 rounded-full bg-[#7C3AED]/60"
+                      style={{
+                        height: `${Math.max(4, Math.sin(i * 0.5) * 16 + 12)}px`,
+                        animationDelay: `${i * 0.05}s`,
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
 
-              {/* Floating language labels */}
-              {floatingLabels.map((label, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.6 + label.delay }}
-                  style={{
-                    position: "absolute",
-                    top: label.top,
-                    right: label.right,
-                    bottom: label.bottom,
-                    left: label.left,
-                    animation: `float ${3 + i * 0.5}s ease-in-out infinite`,
-                    animationDelay: `${label.delay}s`,
-                  }}
-                  className="rounded-lg border border-purple-500/20 bg-[#0c0c1e]/90 px-3 py-1.5 text-[12px] font-medium text-purple-200 shadow-lg shadow-purple-500/5 backdrop-blur-sm"
-                >
-                  {label.text}
-                </motion.div>
-              ))}
+              {/* Floating accent elements */}
+              <div className="absolute -top-4 -right-4 h-24 w-24 rounded-3xl bg-[#7C3AED]/10 blur-2xl animate-breathe" />
+              <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-3xl bg-[#22C55E]/10 blur-2xl animate-breathe" style={{ animationDelay: '1.5s' }} />
             </div>
-
-            {/* Platform glow base */}
-            <div className="absolute -bottom-8 left-1/2 h-4 w-3/4 -translate-x-1/2 rounded-full bg-purple-600/20 blur-2xl" />
           </motion.div>
         </div>
       </div>

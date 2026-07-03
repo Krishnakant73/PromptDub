@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Check, X, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import FAQ from "../components/FAQ";
 import Footer from "../components/Footer";
 
 const tiers = [
@@ -23,7 +24,7 @@ const tiers = [
       "Session history",
     ],
     cta: "Install Free",
-    popular: false,
+    highlighted: false,
   },
   {
     name: "Starter",
@@ -40,7 +41,7 @@ const tiers = [
     ],
     excluded: ["Priority servers", "API access"],
     cta: "Start 7-Day Trial",
-    popular: false,
+    highlighted: false,
   },
   {
     name: "Pro",
@@ -60,7 +61,7 @@ const tiers = [
     ],
     excluded: [],
     cta: "Go Pro",
-    popular: true,
+    highlighted: true,
   },
   {
     name: "Enterprise",
@@ -79,111 +80,105 @@ const tiers = [
     ],
     excluded: [],
     cta: "Contact Sales",
-    popular: false,
-  },
-];
-
-const faqs = [
-  {
-    q: "How does the free plan work?",
-    a: "Install the Chrome extension and get 30 minutes of live translation daily. No credit card required. Translation uses shared GPU servers with best-effort latency.",
-  },
-  {
-    q: "What is voice cloning?",
-    a: "Voice cloning recreates the streamer's voice in your target language. The AI captures their vocal characteristics from a 5-second sample and generates speech that sounds like them — with their original emotions preserved.",
-  },
-  {
-    q: "Can I self-host PromptDub?",
-    a: "Yes! The entire AI stack is open source. Enterprise plans include deployment support, but you can also self-host the community edition with Docker Compose and a single NVIDIA GPU (A10G or better).",
-  },
-  {
-    q: "Which languages are supported?",
-    a: "We support 23 languages including Hindi, Spanish, Portuguese, French, German, Japanese, Korean, Chinese, Arabic, Russian, and more. Source language is auto-detected.",
-  },
-  {
-    q: "What's the actual latency?",
-    a: "Our pipeline runs in 375-910ms end-to-end: ~30ms for speech recognition, ~85ms for translation, and ~150ms for voice synthesis. Total is always under 1.5 seconds.",
+    highlighted: false,
   },
 ];
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-[#050510] text-white font-[Inter,system-ui,sans-serif]">
+    <div className="min-h-screen bg-[#09090B] text-white overflow-x-hidden">
       <Navbar />
 
       <section className="pt-32 pb-20">
         <div className="mx-auto max-w-7xl px-6">
           <Link
             to="/"
-            className="mb-8 inline-flex items-center gap-1 text-sm text-zinc-600 transition-colors hover:text-white"
+            className="mb-8 inline-flex items-center gap-1.5 text-[13px] text-[#A1A1AA]/60 transition-colors duration-200 hover:text-white"
           >
             <ArrowLeft size={14} />
             Back to Home
           </Link>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center"
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="mx-auto max-w-2xl text-center"
           >
-            <h1 className="text-4xl font-bold tracking-tight md:text-5xl">
-              Choose Your{" "}
-              <span className="bg-linear-to-r from-purple-400 to-fuchsia-400 bg-clip-text text-transparent">
-                Plan
-              </span>
+            <h1 className="text-[40px] font-bold tracking-[-0.02em] md:text-[56px]">
+              Choose your plan
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-[15px] text-zinc-500">
+            <p className="mt-4 text-[16px] text-[#A1A1AA]">
               Start free. Upgrade when you need more. Cancel anytime.
             </p>
           </motion.div>
 
-          <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {tiers.map((tier, i) => (
               <motion.div
                 key={tier.name}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: i * 0.1 }}
-                className={`relative flex flex-col rounded-2xl border p-6 ${
-                  tier.popular
-                    ? "border-purple-500/30 bg-[#0f0a20] shadow-xl shadow-purple-500/10"
-                    : "border-purple-500/10 bg-[#0a0a1a]/80"
+                transition={{
+                  duration: 0.5,
+                  delay: i * 0.08,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+                className={`relative flex flex-col rounded-2xl border p-7 ${
+                  tier.highlighted
+                    ? "border-[#7C3AED]/30 bg-[#7C3AED]/[0.05]"
+                    : "border-white/[0.06] bg-[#111113]"
                 }`}
               >
-                {tier.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-linear-to-r from-[#ff5500] to-[#ff0055] px-4 py-1 text-[11px] font-semibold text-white">
+                {tier.highlighted && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[#7C3AED] px-4 py-1 text-[11px] font-semibold text-white">
                     Most Popular
                   </div>
                 )}
 
-                <h3 className="text-[15px] font-semibold text-zinc-300">{tier.name}</h3>
-                <div className="mt-2 flex items-baseline gap-0.5">
-                  <span className="text-[36px] font-bold">{tier.price}</span>
-                  <span className="text-[14px] text-zinc-500">{tier.period}</span>
+                <h3 className="text-[14px] font-semibold text-[#A1A1AA]">
+                  {tier.name}
+                </h3>
+                <div className="mt-3 flex items-baseline gap-1">
+                  <span className="text-[40px] font-bold tracking-tight">
+                    {tier.price}
+                  </span>
+                  {tier.period && (
+                    <span className="text-[14px] text-[#A1A1AA]">
+                      {tier.period}
+                    </span>
+                  )}
                 </div>
-                <p className="mt-1.5 text-[12px] text-zinc-600">{tier.description}</p>
+                <p className="mt-2 text-[12px] text-[#A1A1AA]/60">
+                  {tier.description}
+                </p>
 
-                <div className="mt-6 flex-1 space-y-2.5">
+                <div className="mt-7 flex-1 space-y-3">
                   {tier.features.map((f) => (
-                    <div key={f} className="flex items-center gap-2.5 text-[13px]">
-                      <Check size={14} className="shrink-0 text-emerald-400" />
-                      <span className="text-zinc-400">{f}</span>
+                    <div key={f} className="flex items-start gap-2.5">
+                      <Check
+                        size={15}
+                        className="mt-0.5 shrink-0 text-[#22C55E]"
+                      />
+                      <span className="text-[13px] text-[#A1A1AA]">{f}</span>
                     </div>
                   ))}
                   {tier.excluded.map((f) => (
-                    <div key={f} className="flex items-center gap-2.5 text-[13px]">
-                      <X size={14} className="shrink-0 text-zinc-700" />
-                      <span className="text-zinc-700">{f}</span>
+                    <div key={f} className="flex items-start gap-2.5">
+                      <X
+                        size={15}
+                        className="mt-0.5 shrink-0 text-white/10"
+                      />
+                      <span className="text-[13px] text-white/20">{f}</span>
                     </div>
                   ))}
                 </div>
 
                 <button
-                  className={`mt-7 w-full rounded-xl py-2.5 text-[13px] font-semibold transition-all ${
-                    tier.popular
-                      ? "bg-linear-to-r from-[#ff5500] to-[#ff0055] text-white shadow-lg shadow-red-500/20 hover:shadow-red-500/30"
-                      : "border border-purple-500/15 bg-purple-500/5 text-zinc-300 hover:border-purple-500/30 hover:bg-purple-500/10"
+                  className={`mt-8 w-full rounded-xl py-3 text-[13px] font-semibold transition-all duration-300 ${
+                    tier.highlighted
+                      ? "bg-[#7C3AED] text-white hover:bg-[#6D28D9] hover:shadow-[0_0_30px_rgba(124,58,237,0.25)]"
+                      : "border border-white/[0.08] bg-white/[0.03] text-[#A1A1AA] hover:border-white/[0.15] hover:text-white"
                   }`}
                 >
                   {tier.cta}
@@ -194,35 +189,7 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className="border-t border-purple-500/10 py-20">
-        <div className="mx-auto max-w-3xl px-6">
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-12 text-center text-3xl font-bold"
-          >
-            Frequently Asked Questions
-          </motion.h2>
-
-          <div className="space-y-5">
-            {faqs.map((faq, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
-                className="rounded-xl border border-purple-500/10 bg-[#0a0a1a]/80 p-6"
-              >
-                <h3 className="text-[15px] font-semibold">{faq.q}</h3>
-                <p className="mt-2 text-[13px] leading-relaxed text-zinc-500">{faq.a}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
+      <FAQ />
       <Footer />
     </div>
   );

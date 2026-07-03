@@ -1,139 +1,176 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mic, Languages, Volume2 } from "lucide-react";
+import { ChevronDown, Check } from "lucide-react";
 
 const steps = [
   {
-    icon: Mic,
-    step: "01",
-    title: "Capture Audio",
+    number: "01",
+    title: "Install Extension",
     description:
-      "Our Chrome extension captures the audio directly from any stream or video — no downloads, no setup. Just click and go.",
+      "Add PromptDub to Chrome in one click. No setup required — it's ready to go.",
   },
   {
-    icon: Languages,
-    step: "02",
-    title: "AI Translates",
+    number: "02",
+    title: "Select Language",
     description:
-      "Faster and more accurate speech translation in real-time, with context, tone, and emotion fully preserved.",
+      "Choose your target language and the stream you want to translate.",
   },
   {
-    icon: Volume2,
-    step: "03",
-    title: "Voice Clone Speaks",
+    number: "03",
+    title: "Clone Voice",
     description:
-      "Our AI voice clone speaks in the streamer's voice in your language, exactly as they intended.",
+      "PromptDub listens for 5 seconds to build a voice profile of the speaker.",
+  },
+  {
+    number: "04",
+    title: "Hear Translation",
+    description:
+      "Get real-time translated audio in the speaker's cloned voice with full emotion.",
   },
 ];
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.15 },
-  },
-};
-
-const item = {
-  hidden: { opacity: 0, y: 30 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5 } },
-};
-
-function Waveform() {
-  return (
-    <div className="flex h-12 items-end justify-center gap-[3px]">
-      {Array.from({ length: 40 }).map((_, i) => {
-        const height = Math.sin(i * 0.4) * 30 + 10 + Math.random() * 8;
-        return (
-          <div
-            key={i}
-            className="w-[2px] rounded-full bg-linear-to-t from-purple-600/40 to-purple-400/60"
-            style={{
-              height: `${height}%`,
-              animation: `wave ${1.5 + Math.random()}s ease-in-out infinite`,
-              animationDelay: `${i * 0.05}s`,
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
 export default function HowItWorks() {
-  return (
-    <section id="how-it-works" className="relative py-20 md:py-28">
-      <div className="mx-auto max-w-7xl px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center"
-        >
-          <span className="text-[12px] font-semibold uppercase tracking-[3px] text-purple-400">
-            How It Works
-          </span>
-          <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-[42px]">
-            Three Steps to{" "}
-            <span className="text-white">Universal Streaming</span>
-          </h2>
-          <p className="mx-auto mt-3 max-w-lg text-[15px] text-zinc-500">
-            From click to translated voice — all in under 1s seconds.
-          </p>
-        </motion.div>
+  const [activeStep, setActiveStep] = useState(0);
 
-        <motion.div
-          variants={container}
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          className="mt-14 grid gap-6 md:grid-cols-3"
-        >
-          {steps.map((s, i) => (
+  return (
+    <section id="how-it-works" className="relative section-padding">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="grid items-center gap-16 lg:grid-cols-2">
+          {/* Left - Steps */}
+          <div>
             <motion.div
-              key={s.step}
-              variants={item}
-              className="group relative flex flex-col overflow-hidden rounded-2xl border border-purple-500/10 bg-[#0a0a1a]/80 transition-all hover:border-purple-500/20"
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="flex-1 p-7">
-                {/* Icon + Step number row */}
-                <div className="mb-5 flex items-center justify-between">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-purple-600/30 to-purple-800/30 ring-1 ring-purple-500/20">
-                    <s.icon size={20} className="text-purple-400" />
+              <span className="micro-label text-[#7C3AED]">
+                How It Works
+              </span>
+              <h2 className="heading-2 mt-4 text-balance">
+                Four simple steps to
+                <br />
+                global understanding
+              </h2>
+            </motion.div>
+
+            <div className="mt-12 space-y-4">
+              {steps.map((step, i) => (
+                <motion.div
+                  key={step.number}
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{
+                    duration: 0.5,
+                    delay: i * 0.1,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className={`glass-card rounded-2xl p-6 cursor-pointer transition-all duration-300 ${
+                    activeStep === i
+                      ? "border-[#7C3AED]/30 bg-[#7C3AED]/5"
+                      : "hover:border-white/[0.1]"
+                  }`}
+                  onClick={() => setActiveStep(i)}
+                >
+                  <div className="flex items-start gap-4">
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[13px] font-bold transition-colors duration-300 ${
+                        activeStep === i
+                          ? "bg-[#7C3AED] text-white"
+                          : "bg-[#17171B] text-[#A1A1AA]"
+                      }`}
+                    >
+                      {activeStep > i ? (
+                        <Check size={16} />
+                      ) : (
+                        step.number
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-[15px] font-semibold text-white">
+                          {step.title}
+                        </h3>
+                        <ChevronDown
+                          size={16}
+                          className={`text-[#A1A1AA] transition-transform duration-300 ${
+                            activeStep === i ? "rotate-180" : ""
+                          }`}
+                        />
+                      </div>
+                      <p
+                        className={`body-sm mt-1.5 text-[#A1A1AA] transition-all duration-300 ${
+                          activeStep === i
+                            ? "max-h-40 opacity-100"
+                            : "max-h-0 opacity-0 overflow-hidden"
+                        }`}
+                      >
+                        {step.description}
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-[28px] font-bold text-white/[0.04]">
-                    {s.step}
-                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right - Visual */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="relative flex items-center justify-center"
+          >
+            <div className="relative w-full max-w-lg">
+              <div className="glass-card rounded-[32px] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.4)]">
+                {/* Step visualization */}
+                <div className="space-y-6">
+                  {steps.map((step, i) => (
+                    <div
+                      key={step.number}
+                      className={`flex items-center gap-4 p-4 rounded-2xl transition-all duration-500 ${
+                        activeStep === i
+                          ? "bg-[#7C3AED]/10 border border-[#7C3AED]/20"
+                          : "opacity-40"
+                      }`}
+                    >
+                      <div
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[13px] font-bold ${
+                          activeStep >= i
+                            ? "bg-[#7C3AED] text-white"
+                            : "bg-[#17171B] text-[#A1A1AA]"
+                        }`}
+                      >
+                        {activeStep > i ? (
+                          <Check size={16} />
+                        ) : (
+                          step.number
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-[14px] font-semibold text-white">
+                          {step.title}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
-                <h3 className="text-lg font-semibold text-white">{s.title}</h3>
-                <p className="mt-2.5 text-[13px] leading-relaxed text-zinc-500">
-                  {s.description}
-                </p>
+                {/* Progress indicator */}
+                <div className="mt-8 h-1 rounded-full bg-[#17171B] overflow-hidden">
+                  <motion.div
+                    className="h-full rounded-full bg-[#7C3AED]"
+                    initial={{ width: "0%" }}
+                    animate={{ width: `${((activeStep + 1) / steps.length) * 100}%` }}
+                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                </div>
               </div>
-
-              {/* Waveform visualization at bottom */}
-              <div className="border-t border-purple-500/5 px-4 py-3">
-                <Waveform />
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
-
-        {/* Pipeline latency pill */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-10 flex justify-center"
-        >
-          <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/15 bg-[#0a0a1a]/80 px-5 py-2 text-[13px]">
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-purple-400" />
-            <span className="text-zinc-400">Total Pipeline:</span>
-            <span className="font-semibold text-white">&lt; 700ms</span>
-          </div>
-        </motion.div>
+            </div>
+          </motion.div>
+        </div>
       </div>
     </section>
   );
