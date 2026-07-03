@@ -20,19 +20,34 @@ class ReconnectingWebSocket {
 
   connect() {
     try {
+      console.log("[PromptDub] Connecting to:", this.url);
       this.ws = new WebSocket(this.url);
       this.ws.binaryType = "arraybuffer";
+
+      // Connection timeout - if server doesn't respond in 10s, report error
+      this._connectTimeout = setTimeout(() => {
+        if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+          console.error("[PromptDub] Connection timeout - server not responding");
+          this.ws.close();
+          this.onStatus?.({
+            type: "error",
+            message: "Server not responding. Check the URL and ensure the server is running.",
+          });
+        }
+      }, 10000);
     } catch (err) {
       console.error("[PromptDub] WebSocket creation failed:", err);
       this.onStatus?.({
         type: "error",
-        message: "Invalid server URL",
+        message: "Invalid server URL: " + this.url,
       });
       return;
     }
 
     this.ws.onopen = () => {
+      clearTimeout(this._connectTimeout);
       this.reconnectAttempts = 0;
+      console.log("[PromptDub] WebSocket connected");
       if (this.isReconnecting) {
         this.isReconnecting = false;
         this.onReconnect?.();
@@ -42,20 +57,26 @@ class ReconnectingWebSocket {
     };
 
     this.ws.onclose = (event) => {
+      clearTimeout(this._connectTimeout);
+      console.log(`[PromptDub] WebSocket closed: code=${event.code} reason="${event.reason}" wasClean=${event.wasClean}`);
       if (!event.wasClean && this.shouldReconnect) {
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect();
         } else {
           this.onStatus?.({
             type: "error",
-            message: "Max reconnect attempts reached",
+            message: `Server disconnected after ${this.maxReconnectAttempts} attempts (code: ${event.code})`,
           });
         }
       }
     };
 
     this.ws.onerror = (event) => {
-      console.warn("[PromptDub] WebSocket error:", event);
+      console.error("[PromptDub] WebSocket error:", event);
+      this.onStatus?.({
+        type: "error",
+        message: "Connection failed - check server URL and status",
+      });
       try {
         this.ws.close();
       } catch (e) {}
@@ -170,12 +191,16 @@ class ReconnectingWebSocket {
 
   close() {
     this.shouldReconnect = false;
+    clearTimeout(this._connectTimeout);
     try {
       if (this.ws) {
         if (this.ws.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify({ type: "session_end" }));
+          this.ws.close(1000, "Session ended by user");
         }
-        this.ws.close(1000, "Session ended by user");
+        // For CONNECTING/CLOSING/CLOSED - just null the ref, don't call .close()
+        // Calling .close() on a CONNECTING socket causes the error we're seeing
+        this.ws = null;
       }
     } catch (e) {
       console.warn("[PromptDub] WS close error:", e);

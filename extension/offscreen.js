@@ -40,7 +40,29 @@ async function handleStartCapture(streamId, config) {
     if (config.dubVolume !== undefined) pipeline.setDubVolume(config.dubVolume);
     if (config.duckingLevel !== undefined) pipeline.setDuckingLevel(config.duckingLevel);
 
-    wsManager = new ReconnectingWebSocket(config.serverUrl, config.sessionId);
+    // Convert http/https to ws/wss if needed
+    let wsUrl = config.serverUrl;
+    if (wsUrl.startsWith("http://")) {
+      wsUrl = "ws://" + wsUrl.slice(7);
+    } else if (wsUrl.startsWith("https://")) {
+      wsUrl = "wss://" + wsUrl.slice(8);
+    }
+    // Ensure proper WebSocket URL format
+    if (!wsUrl.startsWith("ws://") && !wsUrl.startsWith("wss://")) {
+      wsUrl = "ws://" + wsUrl;
+    }
+    // Append path if not present
+    if (!wsUrl.includes("/ws/")) {
+      wsUrl = wsUrl.replace(/\/$/, "") + "/ws/translate";
+    }
+
+    // SSL/TLS validation - wss:// requires HTTPS origin
+    if (wsUrl.startsWith("wss://") && window.location.protocol === "http:") {
+      console.warn("[PromptDub] SSL warning: wss:// may fail from http:// page. Use ws:// for local servers.");
+    }
+
+    console.log("[PromptDub] Final WebSocket URL:", wsUrl);
+    wsManager = new ReconnectingWebSocket(wsUrl, config.sessionId);
 
     wsManager.onSubtitle = (msg) => {
       try {

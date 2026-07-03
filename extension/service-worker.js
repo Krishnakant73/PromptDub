@@ -23,6 +23,12 @@ function stopKeepAlive() {
 }
 
 async function startCapture(tab, platform) {
+  // First stop any existing capture
+  if (isCapturing) {
+    try { await stopCapture(); } catch {}
+    await new Promise(r => setTimeout(r, 500));
+  }
+
   try {
     let streamId;
     try {
@@ -31,7 +37,20 @@ async function startCapture(tab, platform) {
       });
     } catch (err) {
       console.error("[PromptDub] getMediaStreamId failed:", err);
-      throw new Error("Cannot capture this tab. Make sure the tab is active and playing audio.");
+      // If tab has active stream, try stopping and retrying once
+      if (err.message?.includes("active stream")) {
+        console.log("[PromptDub] Tab has active stream, retrying after delay...");
+        await new Promise(r => setTimeout(r, 1000));
+        try {
+          streamId = await chrome.tabCapture.getMediaStreamId({
+            targetTabId: tab.id,
+          });
+        } catch (retryErr) {
+          throw new Error("Cannot capture this tab. Close other extensions capturing this tab and reload.");
+        }
+      } else {
+        throw new Error("Cannot capture this tab. Make sure the tab is active and playing audio.");
+      }
     }
 
     try {
@@ -142,13 +161,20 @@ async function ensureOffscreenDocument() {
       contextTypes: ["OFFSCREEN_DOCUMENT"],
     });
 
-    if (existingContexts.length > 0) return;
+    if (existingContexts.length > 0) {
+      // Wait a bit for offscreen to be fully ready
+      await new Promise(r => setTimeout(r, 200));
+      return;
+    }
 
     await chrome.offscreen.createDocument({
       url: "offscreen.html",
       reasons: ["USER_MEDIA", "AUDIO_PLAYBACK"],
       justification: "Audio capture from tab and translated audio playback",
     });
+
+    // Wait for offscreen document to initialize
+    await new Promise(r => setTimeout(r, 300));
   } catch (err) {
     console.error("[PromptDub] Failed to create offscreen document:", err);
     throw err;

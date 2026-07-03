@@ -449,6 +449,7 @@ def load_svara_model():
 
     logger.info("Loading Svara-TTS model...")
     try:
+        import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
         model_name = os.environ.get("SVARATTS_MODEL", "kenpath/svara-tts-v1")
         svara_tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -645,7 +646,7 @@ app = FastAPI(title="PromptDub Colab Gateway", version="0.1.0", lifespan=lifespa
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -907,10 +908,16 @@ async def websocket_translate(ws: WebSocket):
 
 if __name__ == "__main__":
     print("=" * 60)
-    print("PromptDub Colab Backend")
+    print("PromptDub Colab Backend v0.5.0")
     print("=" * 60)
+    print("Models: CosyVoice3 | Svara-TTS | Faster-Whisper | Qwen3-8B")
     print("Starting server on port 8000...")
-    print("After startup, use ngrok to expose: !ngrok http 8000")
+    print()
+    print("After startup, run in another cell:")
+    print("  !pip install pyngrok && ngrok http 8000")
+    print()
+    print("Then copy the https:// URL and use in extension as:")
+    print("  wss://YOUR-NGROK-URL.ngrok-free.app/ws/translate")
     print("=" * 60)
 
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

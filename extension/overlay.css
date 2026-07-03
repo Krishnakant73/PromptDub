@@ -97,13 +97,13 @@
 
 /* ── Panel ── */
 #pd-panel {
-  position: absolute; top: 52px; right: 12px; width: 340px; max-height: 520px;
+  position: absolute; top: 52px; right: 12px; width: 340px; max-height: 600px;
   overflow-y: auto; z-index: 63; pointer-events: auto;
   background: rgba(12,12,12,0.96);
   -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
   border: 1px solid rgba(255,255,255,0.1); border-radius: 14px;
   box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
-  overflow: hidden; animation: pdPanelIn 0.18s ease-out;
+  animation: pdPanelIn 0.18s ease-out;
 }
 #pd-panel::-webkit-scrollbar { width: 4px; }
 #pd-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
@@ -177,6 +177,7 @@
 .pd-select option { background: #1a1a1a; color: #e5e5e5; }
 .pd-select:focus, .pd-input:focus { border-color: #6366f1; }
 .pd-input { font-size: 11px; font-family: "JetBrains Mono", "Fira Code", monospace; }
+.pd-hint { font-size: 10px; color: #525252; margin-top: -2px; }
 
 /* ── Slider ── */
 .pd-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.1); outline: none; }

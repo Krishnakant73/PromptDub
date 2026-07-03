@@ -173,7 +173,11 @@ function updateConnectionState(state, message) {
 function injectOverlay() {
   if (document.getElementById(OVERLAY_ID)) { syncOverlayState(); return; }
   const player = getPlayerContainer();
-  if (!player) return;
+  if (!player) {
+    // Retry after a delay if player not found
+    setTimeout(injectOverlay, 1000);
+    return;
+  }
   loadSettings();
 
   const overlay = document.createElement("div");
@@ -272,7 +276,8 @@ function injectOverlay() {
           <div class="pd-field">
             <label class="pd-label">Server</label>
             <input id="pd-server-url" class="pd-input" type="text"
-              placeholder="wss://your-server/ws/translate" />
+              placeholder="ws://localhost:8000/ws/translate" />
+            <div class="pd-hint">Use ws:// for local, wss:// for HTTPS servers</div>
           </div>
           <div id="pd-status-bar" class="pd-status-bar">
             <div id="pd-panel-status-dot" class="pd-dot pd-dot-off"></div>
