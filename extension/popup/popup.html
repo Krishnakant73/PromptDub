@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PromptDub</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 360px;
+      min-height: 480px;
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #e5e5e5;
+    }
+
+    .header {
+      padding: 20px 20px 12px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .header h1 {
+      font-size: 20px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.3px;
+    }
+
+    .header p {
+      font-size: 12px;
+      color: #737373;
+      margin-top: 4px;
+    }
+
+    .section {
+      padding: 16px 20px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #737373;
+      margin-bottom: 8px;
+    }
+
+    .lang-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .lang-row label {
+      font-size: 13px;
+      color: #a3a3a3;
+      width: 90px;
+      flex-shrink: 0;
+    }
+
+    select {
+      flex: 1;
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #e5e5e5;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    select:focus {
+      border-color: #6366f1;
+    }
+
+    .server-input {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #e5e5e5;
+      font-size: 12px;
+      font-family: "JetBrains Mono", monospace;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .server-input:focus {
+      border-color: #6366f1;
+    }
+
+    .status-section {
+      padding: 16px 20px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .status-card {
+      background: #1a1a1a;
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #6b7280;
+      flex-shrink: 0;
+    }
+
+    .status-dot.active { background: #22c55e; }
+    .status-dot.building { background: #f59e0b; }
+
+    .status-info {
+      flex: 1;
+    }
+
+    .status-title {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .status-detail {
+      font-size: 11px;
+      color: #737373;
+      margin-top: 2px;
+    }
+
+    .actions {
+      padding: 16px 20px;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary.stop {
+      background: linear-gradient(135deg, #dc2626, #ef4444);
+    }
+
+    .footer {
+      padding: 12px 20px;
+      text-align: center;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .footer a {
+      font-size: 11px;
+      color: #6366f1;
+      text-decoration: none;
+    }
+
+    .footer span {
+      font-size: 11px;
+      color: #525252;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>PromptDub</h1>
+    <p>Real-time stream translation with voice cloning</p>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Language</div>
+    <div class="lang-row">
+      <label>Stream speaks</label>
+      <select id="source-lang">
+        <option value="auto">Auto-detect</option>
+        <option value="en">English</option>
+        <option value="hi">Hindi</option>
+        <option value="es">Spanish</option>
+        <option value="fr">French</option>
+        <option value="de">German</option>
+        <option value="ja">Japanese</option>
+        <option value="ko">Korean</option>
+        <option value="zh">Chinese</option>
+        <option value="pt">Portuguese</option>
+        <option value="ru">Russian</option>
+        <option value="ar">Arabic</option>
+        <option value="tr">Turkish</option>
+        <option value="it">Italian</option>
+      </select>
+    </div>
+    <div class="lang-row">
+      <label>I want</label>
+      <select id="target-lang">
+        <option value="hi">Hindi</option>
+        <option value="en">English</option>
+        <option value="es">Spanish</option>
+        <option value="fr">French</option>
+        <option value="de">German</option>
+        <option value="ja">Japanese</option>
+        <option value="ko">Korean</option>
+        <option value="zh">Chinese</option>
+        <option value="pt">Portuguese</option>
+        <option value="ru">Russian</option>
+        <option value="ar">Arabic</option>
+        <option value="tr">Turkish</option>
+        <option value="it">Italian</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Server</div>
+    <input
+      type="text"
+      id="server-url"
+      class="server-input"
+      value="wss://api.promptdub.com/ws/translate"
+      placeholder="wss://your-server/ws/translate"
+    />
+  </div>
+
+  <div class="status-section">
+    <div class="status-card">
+      <div class="status-dot" id="popup-status-dot"></div>
+      <div class="status-info">
+        <div class="status-title" id="popup-status-title">Ready</div>
+        <div class="status-detail" id="popup-status-detail">Open a YouTube or Twitch stream to start</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn-primary" id="action-btn">Start Translating</button>
+  </div>
+
+  <div class="footer">
+    <span>Powered by open-source AI</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

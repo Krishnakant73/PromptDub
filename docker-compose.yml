@@ -1,0 +1,118 @@
+version: "3.9"
+
+services:
+  gateway:
+    build: ./services/gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://promptdub:promptdub@postgres:5432/promptdub
+      - STT_SERVICE_URL=http://stt:8010
+      - LLM_SERVICE_URL=http://llm:8001
+      - TTS_SERVICE_URL=http://tts:8020
+    depends_on:
+      - redis
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 4G
+
+  stt:
+    build: ./services/stt
+    ports:
+      - "8010:8010"
+    environment:
+      - MODEL_SIZE=large-v3-turbo
+      - COMPUTE_TYPE=int8
+      - DEVICE=cuda
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 8G
+
+  llm:
+    image: vllm/vllm-openai:latest
+    ports:
+      - "8001:8001"
+    command: >
+      --model Qwen/Qwen2.5-7B-Instruct-AWQ
+      --quantization awq
+      --max-model-len 2048
+      --gpu-memory-utilization 0.85
+      --port 8001
+      --host 0.0.0.0
+      --disable-log-requests
+      --enforce-eager
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 16G
+
+  tts:
+    build: ./services/tts
+    ports:
+      - "8020:8020"
+    environment:
+      - COSYVOICE_MODEL_DIR=/models/CosyVoice2-0.5B
+    volumes:
+      - model-cache:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 16G
+
+  redis:
+    image: valkey/valkey:8.0-alpine
+    ports:
+      - "6379:6379"
+    command: >
+      valkey-server
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --appendonly no
+    volumes:
+      - redis-data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=promptdub
+      - POSTGRES_USER=promptdub
+      - POSTGRES_PASSWORD=promptdub
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+volumes:
+  model-cache:
+  redis-data:
+  postgres-data:

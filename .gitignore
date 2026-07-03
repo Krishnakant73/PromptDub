@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+*.env
+
+# Models (large files)
+*.pt
+*.pth
+*.bin
+*.safetensors
+pretrained/
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Extension build
+extension/*.crx
+extension/*.pem
+extension/*.zip
+
+# Reference repos (cloned for study)
+reference/
+intruth-factcheck-master/
